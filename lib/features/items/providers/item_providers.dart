@@ -33,6 +33,20 @@ class PendingSharedLinkNotifier extends Notifier<String?> {
   }
 }
 
+final pendingCreateItemProvider =
+    NotifierProvider<PendingCreateItemNotifier, bool>(() {
+      return PendingCreateItemNotifier();
+    });
+
+class PendingCreateItemNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void setPending(bool value) {
+    state = value;
+  }
+}
+
 // StreamProvider that watches the list of active items in Drift DB
 final activeItemsStreamProvider = StreamProvider<List<Item>>((ref) {
   final db = ref.watch(appDatabaseProvider);
@@ -173,6 +187,23 @@ class ItemOperations {
   Future<void> deleteItem(String id) async {
     await _db.softDeleteItem(id);
     // Trigger sync
+    _syncService.sync();
+  }
+
+  Future<void> restoreItem(Item item) async {
+    final now = DateTime.now().toUtc();
+    final syncStatus = _userId == null
+        ? 'synced'
+        : (item.syncStatus == 'pending_insert'
+            ? 'pending_insert'
+            : 'pending_update');
+    await _db.saveItem(
+      item.copyWith(
+        deletedAt: const Value(null),
+        updatedAt: now,
+        syncStatus: syncStatus,
+      ),
+    );
     _syncService.sync();
   }
 }

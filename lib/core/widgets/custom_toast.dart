@@ -1,29 +1,60 @@
+import 'dart:async';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../theme/app_theme.dart';
+import '../../features/settings/providers/settings_provider.dart';
 
 class CustomToast {
+  static OverlayEntry? _current;
+
   static void show(
     BuildContext context,
     String message, {
     bool isSuccess = true,
     Duration duration = const Duration(seconds: 2),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     final overlayState = Overlay.of(context);
-    late OverlayEntry overlayEntry;
+    var unblurEnabled = true;
+    var fromBottom = true;
+    try {
+      final container = ProviderScope.containerOf(context, listen: false);
+      unblurEnabled = container.read(toastUnblurEnabledProvider);
+      fromBottom = container.read(toastFromBottomProvider);
+    } catch (_) {}
 
+    if (_current != null && _current!.mounted) {
+      _current!.remove();
+    }
+    _current = null;
+
+    late OverlayEntry overlayEntry;
     overlayEntry = OverlayEntry(
       builder: (context) => _ToastWidget(
         message: message,
         isSuccess: isSuccess,
+        unblurEnabled: unblurEnabled,
+        fromBottom: fromBottom,
+        actionLabel: actionLabel,
+        onAction: onAction,
         onDismissed: () {
-          overlayEntry.remove();
+          if (_current == overlayEntry) {
+            _current = null;
+          }
+          if (overlayEntry.mounted) {
+            overlayEntry.remove();
+          }
         },
         duration: duration,
       ),
     );
 
+    _current = overlayEntry;
     overlayState.insert(overlayEntry);
   }
 }
@@ -31,12 +62,20 @@ class CustomToast {
 class _ToastWidget extends StatefulWidget {
   final String message;
   final bool isSuccess;
+  final bool unblurEnabled;
+  final bool fromBottom;
+  final String? actionLabel;
+  final VoidCallback? onAction;
   final VoidCallback onDismissed;
   final Duration duration;
 
   const _ToastWidget({
     required this.message,
     required this.isSuccess,
+    required this.unblurEnabled,
+    required this.fromBottom,
+    this.actionLabel,
+    this.onAction,
     required this.onDismissed,
     required this.duration,
   });
@@ -47,42 +86,107 @@ class _ToastWidget extends StatefulWidget {
 
 class _ToastWidgetState extends State<_ToastWidget>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacityAnimation;
-  late Animation<Offset> _slideAnimation;
+  static const _enterDuration = Duration(milliseconds: 560);
+  static const _exitDuration = Duration(milliseconds: 280);
+  static const _travel = 240.0;
+  static const _maxBlur = 18.0;
+  static const _enterCurve = Cubic(0.16, 1.05, 0.3, 1);
+  static const _searchBarHeight = 64.0;
+  static const _searchBarBottomGap = 20.0;
+  static const _toastAboveBarGap = 12.0;
+  static const _bottomClearance =
+      _searchBarBottomGap + _searchBarHeight + _toastAboveBarGap;
+
+  late final AnimationController _controller;
+  late final Animation<double> _slide;
+  late final Animation<double> _blur;
+  late final Animation<double> _opacity;
+  Timer? _holdTimer;
+  bool _started = false;
+  bool _dismissed = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: _enterDuration,
+      reverseDuration: _exitDuration,
     );
 
-    _opacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    final motion = CurvedAnimation(
+      parent: _controller,
+      curve: _enterCurve,
+      reverseCurve: Curves.easeInCubic,
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _slide = Tween<double>(
+      begin: widget.fromBottom ? _travel : -_travel,
+      end: 0,
+    ).animate(motion);
+    _blur = Tween<double>(
+      begin: widget.unblurEnabled ? _maxBlur : 0,
+      end: 0,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.82, curve: _enterCurve),
+        reverseCurve: const Interval(0.2, 1, curve: Curves.easeIn),
+      ),
+    );
+    _opacity = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.22, curve: Curves.easeOut),
+        reverseCurve: const Interval(0.0, 0.55, curve: Curves.easeIn),
+      ),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+      _scheduleDismiss();
+      return;
+    }
 
     _controller.forward();
+    _scheduleDismiss();
+  }
 
-    // Start dismiss timer
-    Future.delayed(widget.duration, () {
-      if (mounted) {
-        _controller.reverse().then((_) {
-          widget.onDismissed();
-        });
-      }
-    });
+  void _scheduleDismiss() {
+    _holdTimer?.cancel();
+    _holdTimer = Timer(widget.duration, _dismiss);
+  }
+
+  Future<void> _dismiss() async {
+    if (_dismissed || !mounted) return;
+    _dismissed = true;
+    _holdTimer?.cancel();
+
+    if (_controller.value == 0) {
+      widget.onDismissed();
+      return;
+    }
+
+    try {
+      await _controller.reverse();
+    } catch (_) {
+      // The overlay may have been replaced while the exit ran.
+    }
+    if (mounted) {
+      widget.onDismissed();
+    }
   }
 
   @override
   void dispose() {
+    _holdTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -92,17 +196,48 @@ class _ToastWidgetState extends State<_ToastWidget>
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
 
+    final padding = MediaQuery.paddingOf(context);
+    final ime = MediaQuery.viewInsetsOf(context).bottom;
+    final bottomOffset = ime > 0
+        ? ime + 12
+        : padding.bottom + _bottomClearance;
+
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 16,
+      top: widget.fromBottom ? null : padding.top + 16,
+      bottom: widget.fromBottom ? bottomOffset : null,
       left: 16,
       right: 16,
       child: IgnorePointer(
-        child: FadeTransition(
-          opacity: _opacityAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Align(
-              alignment: Alignment.topCenter,
+        ignoring: widget.actionLabel == null,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final sigma = widget.unblurEnabled ? _blur.value : 0.0;
+            Widget toast = child!;
+            if (sigma > 0.05) {
+              toast = ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: sigma,
+                  sigmaY: sigma,
+                  tileMode: TileMode.decal,
+                ),
+                child: toast,
+              );
+            }
+            return Opacity(
+              opacity: _opacity.value,
+              child: Transform.translate(
+                offset: Offset(0, _slide.value),
+                child: toast,
+              ),
+            );
+          },
+          child: Align(
+            heightFactor: 1,
+            alignment: widget.fromBottom
+                ? Alignment.bottomCenter
+                : Alignment.topCenter,
+            child: RepaintBoundary(
               child: Material(
                 color: Colors.transparent,
                 child: ClipRRect(
@@ -164,6 +299,25 @@ class _ToastWidgetState extends State<_ToastWidget>
                                 ),
                               ),
                             ),
+                            if (widget.actionLabel != null) ...[
+                              const SizedBox(width: 12),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  widget.onAction?.call();
+                                  _dismiss();
+                                },
+                                child: Text(
+                                  widget.actionLabel!,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 16,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primaryOcean,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

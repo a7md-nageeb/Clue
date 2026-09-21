@@ -13,6 +13,7 @@ import '../../../core/database/database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/custom_toast.dart';
 import '../providers/item_providers.dart';
+import 'delete_item_sheet.dart';
 
 enum ItemMoreMenuPlacement {
   /// Anchors below a top-right control (e.g. the ⋮ button).
@@ -254,27 +255,9 @@ List<Widget> _buildMenuItems({
       onTap: () async {
         final hostContext = Navigator.of(context).context;
         Navigator.of(context).pop();
-        final confirmed = await showDialog<bool>(
+        final confirmed = await showDeleteItemSheet(
           context: hostContext,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Delete Item'),
-            content: Text(
-              'Delete "${item.title.isNotEmpty ? item.title : item.content}"?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(
-                  'Delete',
-                  style: TextStyle(color: AppTheme.deleteRed),
-                ),
-              ),
-            ],
-          ),
+          item: item,
         );
 
         if (confirmed != true) return;
@@ -282,7 +265,15 @@ List<Widget> _buildMenuItems({
         try {
           await ref.read(itemOperationsProvider).deleteItem(item.id);
           if (hostContext.mounted) {
-            CustomToast.show(hostContext, 'Item deleted', isSuccess: true);
+            CustomToast.show(
+              hostContext,
+              'Item deleted',
+              isSuccess: true,
+              actionLabel: 'Undo',
+              onAction: () {
+                ref.read(itemOperationsProvider).restoreItem(item);
+              },
+            );
           }
           onDeleted?.call();
         } catch (e) {

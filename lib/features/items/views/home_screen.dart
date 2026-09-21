@@ -10,14 +10,18 @@ import '../providers/item_providers.dart';
 import '../../../core/database/database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/custom_toast.dart';
+import '../../../core/haptics/app_haptics.dart';
 import '../../../core/widgets/logo_widget.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/constants/icon_assets.dart';
 import 'create_item_sheet.dart';
 import 'item_detail_sheet.dart';
+import '../widgets/delete_item_sheet.dart';
 import '../widgets/item_more_menu.dart';
+import '../widgets/swipe_to_delete.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../settings/views/settings_screen.dart';
+import '../../settings/providers/settings_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -31,14 +35,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchFocusNode = FocusNode();
   final _fabKey = GlobalKey();
   String? _selectedCategory;
+  String? _openSwipeItemId;
   bool _isTagsScrolled = false;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      ref.read(searchQueryProvider.notifier).state = _searchController.text;
-    });
+    _searchController.addListener(_syncSearchQuery);
     _searchFocusNode.addListener(() {
       setState(() {});
     });
@@ -46,9 +49,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    _searchController.removeListener(_syncSearchQuery);
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _syncSearchQuery() {
+    ref.read(searchQueryProvider.notifier).setQuery(_searchController.text);
+  }
+
+  void _cancelSearch() {
+    if (_searchController.text.isNotEmpty) {
+      _searchController.clear();
+    }
+    ref.read(searchQueryProvider.notifier).setQuery('');
+    _searchFocusNode.unfocus();
   }
 
   void _showSharedLinkSheet(String link) {
@@ -92,7 +108,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _copyContent(BuildContext context, Item item) async {
     await Clipboard.setData(ClipboardData(text: item.content));
-    await HapticFeedback.mediumImpact();
+    AppHaptics.copySuccess();
     if (context.mounted) {
       CustomToast.show(
         context,
@@ -131,15 +147,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
+    ref.listen<bool>(pendingCreateItemProvider, (previous, next) {
+      if (next) {
+        ref.read(pendingCreateItemProvider.notifier).setPending(false);
+        _showExpandingCreate(context);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pendingLink = ref.read(pendingSharedLinkProvider);
       if (pendingLink != null) {
         _showSharedLinkSheet(pendingLink);
       }
+      if (ref.read(pendingCreateItemProvider)) {
+        ref.read(pendingCreateItemProvider.notifier).setPending(false);
+        _showExpandingCreate(context);
+      }
     });
 
     final filteredItemsAsync = ref.watch(filteredItemsProvider);
+    final searchQuery = ref.watch(searchQueryProvider);
+    final hasSearchQuery = searchQuery.trim().isNotEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -183,6 +212,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     defaultTargetPlatform == TargetPlatform.macOS;
 
                 Widget scrollView = CustomScrollView(
+                  clipBehavior: Clip.none,
                   physics: const BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics(),
                   ),
@@ -465,6 +495,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   -((topPadding + 104) +
                                       (bottomPadding + 120)) /
                                   2,
+                              isSearching: hasSearchQuery,
                             ),
                           )
                         : SliverPadding(
@@ -605,49 +636,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       //   DROP_SHADOW  rgba(0,0,0,0.04) offset=(0,4) blur=12 spread=2
                       //   INNER_SHADOW rgba(255,255,255,0.96/0.75)
                       Expanded(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => _searchFocusNode.requestFocus(),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOutCubic,
-                            height: 64,
-                            decoration: BoxDecoration(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOutCubic,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(200),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 2,
+                                spreadRadius: 1,
+                                offset: Offset.zero,
+                              ),
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: RepaintBoundary(
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(200),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 2,
-                                  spreadRadius: 1,
-                                  offset: Offset.zero,
-                                ),
-                                BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 12,
-                                  spreadRadius: 2,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: RepaintBoundary(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(200),
-                                child: isAndroid
-                                    ? _buildSearchSurface(
+                              child: isAndroid
+                                  ? _buildSearchSurface(
+                                      isDark: isDark,
+                                      isSearchActive: isSearchActive,
+                                      hasSearchQuery: hasSearchQuery,
+                                    )
+                                  : BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 8,
+                                        sigmaY: 8,
+                                      ),
+                                      child: _buildSearchSurface(
                                         isDark: isDark,
                                         isSearchActive: isSearchActive,
-                                      )
-                                    : BackdropFilter(
-                                        filter: ImageFilter.blur(
-                                          sigmaX: 8,
-                                          sigmaY: 8,
-                                        ),
-                                        child: _buildSearchSurface(
-                                          isDark: isDark,
-                                          isSearchActive: isSearchActive,
-                                        ),
+                                        hasSearchQuery: hasSearchQuery,
                                       ),
-                              ),
+                                    ),
                             ),
                           ),
                         ),
@@ -681,6 +710,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildEmptyState(
     BuildContext context, {
     required double verticalOffset,
+    required bool isSearching,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
@@ -699,7 +729,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Nothing is here',
+                isSearching ? 'No matching things' : 'Nothing is here',
                 style: GoogleFonts.nunito(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -709,7 +739,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Add your first note',
+                isSearching ? 'Try a different search' : 'Add your first note',
                 style: GoogleFonts.nunito(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
@@ -728,7 +758,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildSearchSurface({
     required bool isDark,
     required bool isSearchActive,
+    required bool hasSearchQuery,
   }) {
+    final showCancel = isSearchActive || hasSearchQuery;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -768,13 +800,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            IconAssets.getLinePath('search'),
-            width: 24,
-            height: 24,
-            colorFilter: ColorFilter.mode(
-              isDark ? Colors.white38 : AppTheme.charcoal500,
-              BlendMode.srcIn,
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _searchFocusNode.requestFocus(),
+            child: SvgPicture.asset(
+              IconAssets.getLinePath('search'),
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isDark ? Colors.white38 : AppTheme.charcoal500,
+                BlendMode.srcIn,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -782,6 +818,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: TextField(
               controller: _searchController,
               focusNode: _searchFocusNode,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => _syncSearchQuery(),
+              onTapOutside: (_) => _searchFocusNode.unfocus(),
               style: GoogleFonts.nunito(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -800,36 +839,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: 0,
-                  minHeight: 0,
-                ),
-                suffixIcon: isSearchActive
-                    ? GestureDetector(
-                        onTap: () => _searchFocusNode.unfocus(),
-                        behavior: HitTestBehavior.opaque,
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            left: 12.0,
-                            right: 4.0,
-                            top: 4.0,
-                            bottom: 4.0,
-                          ),
-                          child: SvgPicture.asset(
-                            IconAssets.getSolidPath('x-circle'),
-                            width: 20,
-                            height: 20,
-                            colorFilter: ColorFilter.mode(
-                              isDark ? Colors.white38 : AppTheme.charcoal400,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-                      )
-                    : null,
               ),
             ),
           ),
+          if (showCancel)
+            GestureDetector(
+              onTap: _cancelSearch,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 12.0,
+                  right: 4.0,
+                  top: 4.0,
+                  bottom: 4.0,
+                ),
+                child: SvgPicture.asset(
+                  IconAssets.getSolidPath('x-circle'),
+                  width: 20,
+                  height: 20,
+                  colorFilter: ColorFilter.mode(
+                    isDark ? Colors.white38 : AppTheme.charcoal400,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -876,85 +910,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12), // Figma: itemSpacing=12
-      child: Dismissible(
-        key: Key(item.id),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 24),
-          decoration: BoxDecoration(
-            color: AppTheme.deleteRed.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Icon(
-            Icons.delete_sweep_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
-        confirmDismiss: (_) async {
-          return showDialog<bool>(
+      child: SwipeToDelete(
+        isOpen: _openSwipeItemId == item.id,
+        onOpenChanged: (open) {
+          setState(() {
+            _openSwipeItemId = open
+                ? item.id
+                : (_openSwipeItemId == item.id ? null : _openSwipeItemId);
+          });
+        },
+        onDelete: () async {
+          final confirmed = await showDeleteItemSheet(
             context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Delete Item'),
-              content: Text('Are you sure you want to delete "${item.title}"?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.deleteRed,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Delete'),
-                ),
-              ],
-            ),
+            item: item,
           );
+          if (confirmed != true || !context.mounted) return;
+          try {
+            await ref.read(itemOperationsProvider).deleteItem(item.id);
+            if (context.mounted) {
+              CustomToast.show(
+                context,
+                'Item deleted',
+                isSuccess: true,
+                actionLabel: 'Undo',
+                onAction: () {
+                  ref.read(itemOperationsProvider).restoreItem(item);
+                },
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              CustomToast.show(
+                context,
+                'Failed to delete item: $e',
+                isSuccess: false,
+              );
+            }
+          }
         },
-        onDismissed: (_) {
-          ref.read(itemOperationsProvider).deleteItem(item.id);
-          CustomToast.show(context, 'Item deleted', isSuccess: true);
-        },
-        child: Container(
-          // Outer container holds the drop shadow (outside ClipRRect)
-          // Figma: DROP_SHADOW rgba(0,0,0,0.04) offset=(0,0) blur=2 spread=1
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 2,
-                spreadRadius: 1,
-                offset: Offset.zero,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
-            child: defaultTargetPlatform == TargetPlatform.android
-                ? _buildItemCardSurface(
-                    context,
-                    item,
-                    isDark,
-                    hasTitle,
-                    textToShow,
-                  )
-                : BackdropFilter(
-                    // Figma: BACKGROUND_BLUR radius=16
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: _buildItemCardSurface(
-                      context,
-                      item,
-                      isDark,
-                      hasTitle,
-                      textToShow,
-                    ),
-                  ),
-          ),
+        child: _buildItemCardSurface(
+          context,
+          item,
+          isDark,
+          hasTitle,
+          textToShow,
         ),
       ),
     );
@@ -967,6 +966,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     bool hasTitle,
     String textToShow,
   ) {
+    const radius = BorderRadius.all(Radius.circular(16));
+    final surface = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.white.withValues(alpha: 0.4),
+        borderRadius: radius,
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : const Color(0x1F141414),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.75),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+            blurStyle: BlurStyle.inner,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.96),
+            blurRadius: 2,
+            offset: const Offset(1, 1),
+            blurStyle: BlurStyle.inner,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.96),
+            blurRadius: 2,
+            offset: const Offset(-1, -1),
+            blurStyle: BlurStyle.inner,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildItemIcon(
+            item.icon,
+            size: 20,
+            color: isDark ? Colors.white70 : AppTheme.primaryOcean,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              textToShow,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                fontSize: NoteTextSizes.scaledFrom(
+                  16,
+                  ref.watch(noteTextSizeIndexProvider),
+                ),
+                fontWeight: hasTitle ? FontWeight.w700 : FontWeight.w400,
+                color: isDark ? Colors.white : AppTheme.ocean900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: SvgPicture.asset(
+                IconAssets.getLinePath('copy'),
+                width: 20,
+                height: 20,
+                colorFilter: ColorFilter.mode(
+                  isDark ? Colors.white38 : AppTheme.charcoal500,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
     return GestureDetector(
       onLongPress: itemMoreMenuUsesLongPress
           ? () {
@@ -991,110 +1069,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             }
           : null,
-      child: InkWell(
-      // Tap card body → open detail/edit sheet
-      onTap: () => _showDetailSheet(context, item),
-      borderRadius: const BorderRadius.all(Radius.circular(16)),
       child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          // Figma: FILL rgba(255,255,255,0.4)
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.04)
-              : const Color(0x66FFFFFF),
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          // Figma: STROKE rgba(20,20,20,0.12) w=1
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : const Color(0x1F141414),
-            width: 1.0,
-          ),
+        decoration: const BoxDecoration(
+          borderRadius: radius,
           boxShadow: [
-            // INNER_SHADOW rgba(255,255,255,0.75) offset=(0,4) blur=8
             BoxShadow(
-              color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.75),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-              blurStyle: BlurStyle.inner,
-            ),
-            // INNER_SHADOW rgba(255,255,255,0.96) offset=(1,1) blur=2
-            BoxShadow(
-              color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.96),
+              color: Color(0x0A000000),
               blurRadius: 2,
-              offset: const Offset(1, 1),
-              blurStyle: BlurStyle.inner,
-            ),
-            // INNER_SHADOW rgba(255,255,255,0.96) offset=(-1,-1) blur=2
-            BoxShadow(
-              color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.96),
-              blurRadius: 2,
-              offset: const Offset(-1, -1),
-              blurStyle: BlurStyle.inner,
+              spreadRadius: 1,
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            Row(
-              children: [
-                // Figma: icon 20×20, fill=rgba(102,157,242) = primaryOcean
-                _buildItemIcon(
-                  item.icon,
-                  size: 20,
-                  color: isDark ? Colors.white70 : AppTheme.primaryOcean,
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    if (_openSwipeItemId == item.id) {
+                      setState(() => _openSwipeItemId = null);
+                      return;
+                    }
+                    _showDetailSheet(context, item);
+                  },
+                  child: !kIsWeb &&
+                          defaultTargetPlatform == TargetPlatform.android
+                      ? surface
+                      : BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: surface,
+                        ),
                 ),
-                const SizedBox(width: 12), // Figma: itemSpacing=12
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 36),
-                    child: Text(
-                      textToShow,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.nunito(
-                        fontSize: 16,
-                        // Figma: bold title (700), regular content (400)
-                        fontWeight: hasTitle
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                        // Figma: fill rgba(15,35,67) = ocean900
-                        color: isDark ? Colors.white : AppTheme.ocean900,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: SvgPicture.asset(
-                      IconAssets.getLinePath('copy'),
-                      width: 20,
-                      height: 20,
-                      colorFilter: ColorFilter.mode(
-                        isDark ? Colors.white38 : AppTheme.charcoal500,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              top: -10,
-              right: -10,
-              bottom: -10,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _copyContent(context, item),
-                child: const SizedBox(width: 44),
               ),
-            ),
-          ],
+              Positioned(
+                top: 0,
+                right: 0,
+                width: 48,
+                height: 48,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _copyContent(context, item),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
