@@ -119,6 +119,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // Figma: icon fill = rgba(102,157,242) = primaryOcean
+  Widget _buildTagsScroller(
+    BuildContext context, {
+    required Map<String, int> iconCounts,
+    required bool isDark,
+  }) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        final isScrolled = notification.metrics.pixels > 0;
+        if (_isTagsScrolled != isScrolled) {
+          Future.microtask(() {
+            if (mounted) {
+              setState(() => _isTagsScrolled = isScrolled);
+            }
+          });
+        }
+        return false;
+      },
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(right: 20),
+        child: Row(
+          children: iconCounts.keys.toList().asMap().entries.map((entry) {
+            final index = entry.key;
+            final iconName = entry.value;
+            final count = iconCounts[iconName]!;
+            final isTagActive = _selectedCategory == iconName;
+
+            return Padding(
+              padding: EdgeInsets.only(left: index == 0 ? 0 : 8),
+              child: _buildTagChip(
+                context,
+                isActive: isTagActive,
+                isDark: isDark,
+                onTap: () => setState(() {
+                  _selectedCategory = isTagActive ? null : iconName;
+                }),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildItemIcon(
+                      iconName,
+                      size: 20,
+                      color: isTagActive
+                          ? Colors.white
+                          : (isDark
+                                ? Colors.white70
+                                : AppTheme.charcoal900),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 16,
+                        color: isTagActive
+                            ? AppTheme.ocean100
+                            : (isDark
+                                  ? Colors.white38
+                                  : AppTheme.charcoal600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
   Widget _buildItemIcon(String? iconName, {Color? color, double size = 26}) {
     final assetPath = IconAssets.getPath(iconName ?? 'note');
     return SvgPicture.asset(
@@ -174,11 +245,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isSearchActive = _searchFocusNode.hasFocus;
     final isAndroid = defaultTargetPlatform == TargetPlatform.android;
+    final textSizeIndex = ref.watch(noteTextSizeIndexProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
       body: Stack(
+        clipBehavior: Clip.none,
         children: [
           // ─── 1. Scrollable content ────────────────────────────────────────
           Positioned.fill(
@@ -367,117 +440,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                                     // Horizontally Scrollable Category Tags
                                     Expanded(
-                                      child: ShaderMask(
-                                        shaderCallback: (Rect bounds) {
-                                          return LinearGradient(
-                                            begin: Alignment.centerLeft,
-                                            end: Alignment.centerRight,
-                                            colors: _isTagsScrolled
-                                                ? const <Color>[
+                                      child: _isTagsScrolled
+                                          ? ShaderMask(
+                                              shaderCallback: (Rect bounds) {
+                                                return LinearGradient(
+                                                  begin: Alignment.centerLeft,
+                                                  end: Alignment.centerRight,
+                                                  colors: const <Color>[
                                                     Colors.transparent,
                                                     Colors.white,
-                                                  ]
-                                                : const <Color>[
-                                                    Colors.white,
-                                                    Colors.white,
                                                   ],
-                                            stops: [
-                                              0.0,
-                                              24.0 / bounds.width,
-                                            ], // 24px fade on the left
-                                          ).createShader(bounds);
-                                        },
-                                        blendMode: BlendMode.dstIn,
-                                        child: NotificationListener<ScrollNotification>(
-                                          onNotification: (notification) {
-                                            final isScrolled =
-                                                notification.metrics.pixels > 0;
-                                            if (_isTagsScrolled != isScrolled) {
-                                              Future.microtask(() {
-                                                if (mounted) {
-                                                  setState(
-                                                    () => _isTagsScrolled =
-                                                        isScrolled,
-                                                  );
-                                                }
-                                              });
-                                            }
-                                            return false;
-                                          },
-                                          child: SingleChildScrollView(
-                                            scrollDirection: Axis.horizontal,
-                                            padding: const EdgeInsets.only(
-                                              right: 20,
+                                                  stops: [
+                                                    0.0,
+                                                    24.0 / bounds.width,
+                                                  ],
+                                                ).createShader(bounds);
+                                              },
+                                              blendMode: BlendMode.dstIn,
+                                              child: _buildTagsScroller(
+                                                context,
+                                                iconCounts: iconCounts,
+                                                isDark: isDark,
+                                              ),
+                                            )
+                                          : _buildTagsScroller(
+                                              context,
+                                              iconCounts: iconCounts,
+                                              isDark: isDark,
                                             ),
-                                            child: Row(
-                                              children: iconCounts.keys.toList().asMap().entries.map((
-                                                entry,
-                                              ) {
-                                                final index = entry.key;
-                                                final iconName = entry.value;
-                                                final count =
-                                                    iconCounts[iconName]!;
-                                                final isTagActive =
-                                                    _selectedCategory ==
-                                                    iconName;
-
-                                                return Padding(
-                                                  padding: EdgeInsets.only(
-                                                    left: index == 0 ? 0 : 8,
-                                                  ),
-                                                  child: _buildTagChip(
-                                                    context,
-                                                    isActive: isTagActive,
-                                                    isDark: isDark,
-                                                    onTap: () => setState(() {
-                                                      _selectedCategory =
-                                                          isTagActive
-                                                          ? null
-                                                          : iconName;
-                                                    }),
-                                                    child: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        _buildItemIcon(
-                                                          iconName,
-                                                          size: 20,
-                                                          color: isTagActive
-                                                              ? Colors.white
-                                                              : (isDark
-                                                                    ? Colors
-                                                                          .white70
-                                                                    : AppTheme
-                                                                          .charcoal900),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 4,
-                                                        ),
-                                                        Text(
-                                                          '$count',
-                                                          style: GoogleFonts.nunito(
-                                                            fontWeight:
-                                                                FontWeight.w400,
-                                                            fontSize: 16,
-                                                            color: isTagActive
-                                                                ? AppTheme
-                                                                      .ocean100
-                                                                : (isDark
-                                                                      ? Colors
-                                                                            .white38
-                                                                      : AppTheme
-                                                                            .charcoal600),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
                                     ),
                                   ],
                                 ),
@@ -502,16 +492,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             padding: EdgeInsets.only(
                               left: 20,
                               right: 20,
+                              // Keep the first card's drop shadow inside the
+                              // list sliver so the pinned header does not clip it.
+                              top: 6,
                               bottom: bottomPadding + 120,
                             ),
                             sliver: SliverList(
                               delegate: SliverChildBuilderDelegate(
-                                (context, index) => _buildItemCard(
-                                  context,
-                                  itemsToShow[index],
-                                  isDark,
-                                ),
+                                (context, index) {
+                                  final item = itemsToShow[index];
+                                  return _buildItemCard(
+                                    context,
+                                    item,
+                                    isDark,
+                                    textSizeIndex,
+                                  );
+                                },
                                 childCount: itemsToShow.length,
+                                findChildIndexCallback: (key) {
+                                  if (key is! ValueKey<String>) return null;
+                                  final index = itemsToShow.indexWhere(
+                                    (item) => item.id == key.value,
+                                  );
+                                  return index >= 0 ? index : null;
+                                },
                               ),
                             ),
                           ),
@@ -904,11 +908,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildItemCard(BuildContext context, Item item, bool isDark) {
+  Widget _buildItemCard(
+    BuildContext context,
+    Item item,
+    bool isDark,
+    int textSizeIndex,
+  ) {
     final hasTitle = item.title.trim().isNotEmpty;
     final textToShow = hasTitle ? item.title.trim() : item.content.trim();
 
     return Padding(
+      key: ValueKey(item.id),
       padding: const EdgeInsets.only(bottom: 12), // Figma: itemSpacing=12
       child: SwipeToDelete(
         isOpen: _openSwipeItemId == item.id,
@@ -954,6 +964,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           isDark,
           hasTitle,
           textToShow,
+          textSizeIndex,
         ),
       ),
     );
@@ -965,6 +976,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     bool isDark,
     bool hasTitle,
     String textToShow,
+    int textSizeIndex,
   ) {
     const radius = BorderRadius.all(Radius.circular(16));
     final surface = Container(
@@ -1001,7 +1013,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.center,
+                    colors: [
+                      Colors.white.withValues(alpha: isDark ? 0.10 : 0.28),
+                      Colors.white.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Row(
         children: [
           _buildItemIcon(
             item.icon,
@@ -1014,11 +1045,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               textToShow,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.nunito(
-                fontSize: NoteTextSizes.scaledFrom(
-                  16,
-                  ref.watch(noteTextSizeIndexProvider),
-                ),
+              style: TextStyle(
+                fontSize: NoteTextSizes.scaledFrom(16, textSizeIndex),
                 fontWeight: hasTitle ? FontWeight.w700 : FontWeight.w400,
                 color: isDark ? Colors.white : AppTheme.ocean900,
               ),
@@ -1040,6 +1068,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
+          ),
+        ],
           ),
         ],
       ),
@@ -1094,13 +1124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     }
                     _showDetailSheet(context, item);
                   },
-                  child: !kIsWeb &&
-                          defaultTargetPlatform == TargetPlatform.android
-                      ? surface
-                      : BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                          child: surface,
-                        ),
+                  child: surface,
                 ),
               ),
               Positioned(

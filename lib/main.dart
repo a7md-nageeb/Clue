@@ -13,6 +13,7 @@ import 'core/constants/supabase_constants.dart';
 import 'core/sync/sync_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_buttons.dart';
+import 'core/widgets/brand_splash.dart';
 import 'features/auth/views/auth_screen.dart';
 import 'features/items/views/home_screen.dart';
 import 'features/items/providers/item_providers.dart';
@@ -20,8 +21,9 @@ import 'features/settings/providers/settings_provider.dart';
 import 'core/widgets/widget_updater.dart';
 import 'core/platform/menubar_sync_listener.dart';
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  final warmLaunch = args.contains('warm');
 
   // Initialize Supabase. It uses placeholder credentials of valid format
   // which lets the client initialize and run locally.
@@ -37,13 +39,15 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      child: const MyApp(),
+      child: MyApp(warmLaunch: warmLaunch),
     ),
   );
 }
 
 class MyApp extends ConsumerWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.warmLaunch = false});
+
+  final bool warmLaunch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,7 +73,10 @@ class MyApp extends ConsumerWidget {
             systemNavigationBarColor: AppTheme.lightBackground,
             systemNavigationBarIconBrightness: Brightness.dark,
           ),
-          child: SharedLinkListener(child: child!),
+          child: BrandSplashHost(
+            showOnLaunch: warmLaunch,
+            child: SharedLinkListener(child: child!),
+          ),
         );
 
         // Keep native MainMenu.xib menus (File/Edit/View/Window/Help) on macOS.
@@ -122,6 +129,11 @@ class _AppLockGateState extends ConsumerState<AppLockGate> {
   @override
   void initState() {
     super.initState();
+    if (!ref.read(biometricsEnabledProvider)) {
+      _isAuthenticated = true;
+      _isChecking = false;
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _authenticate();
     });
@@ -155,7 +167,7 @@ class _AppLockGateState extends ConsumerState<AppLockGate> {
   @override
   Widget build(BuildContext context) {
     if (_isChecking) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(backgroundColor: AppTheme.lightBackground);
     }
 
     if (!_isAuthenticated) {

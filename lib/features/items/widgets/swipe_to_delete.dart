@@ -50,7 +50,7 @@ class _SwipeToDeleteState extends State<SwipeToDelete>
       lowerBound: 0,
       upperBound: 1.35,
       value: widget.isOpen ? 1 : 0,
-    )..addListener(() => setState(() {}));
+    );
   }
 
   @override
@@ -99,32 +99,40 @@ class _SwipeToDeleteState extends State<SwipeToDelete>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          child: _SwipeDeleteButton(
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              widget.onOpenChanged(false);
-              widget.onDelete();
-            },
-          ),
-        ),
-        Transform.translate(
-          offset: Offset(-SwipeToDelete.extent * _progress.value, 0),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onHorizontalDragStart: _onDragStart,
-            onHorizontalDragUpdate: _onDragUpdate,
-            onHorizontalDragEnd: _onDragEnd,
-            child: widget.child,
-          ),
-        ),
-      ],
+    return AnimatedBuilder(
+      animation: _progress,
+      builder: (context, child) {
+        final t = _progress.value;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (t > 0.001)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: _SwipeDeleteButton(
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    widget.onOpenChanged(false);
+                    widget.onDelete();
+                  },
+                ),
+              ),
+            Transform.translate(
+              offset: Offset(-SwipeToDelete.extent * t, 0),
+              child: child,
+            ),
+          ],
+        );
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragStart: _onDragStart,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        child: RepaintBoundary(child: widget.child),
+      ),
     );
   }
 }
