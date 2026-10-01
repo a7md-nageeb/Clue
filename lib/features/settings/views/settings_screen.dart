@@ -14,6 +14,7 @@ import '../../../core/sync/sync_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/custom_toast.dart';
+import '../../items/widgets/note_text_size_sheet.dart';
 import '../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -47,7 +48,8 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   String _getAuthProviderLabel(User user) {
-    final provider = user.appMetadata['provider'] as String? ??
+    final provider =
+        user.appMetadata['provider'] as String? ??
         (user.identities?.isNotEmpty == true
             ? user.identities!.first.provider
             : null);
@@ -69,6 +71,10 @@ class SettingsScreen extends ConsumerWidget {
     final isBiometricsEnabled = ref.watch(biometricsEnabledProvider);
     final startAtStartup = ref.watch(startAtStartupProvider);
     final menuBarOnly = ref.watch(menuBarOnlyProvider);
+    final toastUnblurEnabled = ref.watch(toastUnblurEnabledProvider);
+    final toastFromBottom = ref.watch(toastFromBottomProvider);
+    final toastSubtleMotion = ref.watch(toastSubtleMotionProvider);
+    final noteTextSizeIndex = ref.watch(noteTextSizeIndexProvider);
     final syncState = ref.watch(syncStateProvider);
     final lastSyncedAt = ref.watch(lastSyncedAtProvider);
     final currentUser = ref.watch(currentUserProvider);
@@ -106,9 +112,11 @@ class SettingsScreen extends ConsumerWidget {
                             onTap: () async {
                               await ref.read(syncServiceProvider).sync();
                             },
-                            child: SvgPicture.asset(
-                              IconAssets.getPath(
-                                'arrows-rotate-clockwise-horizontal',
+                            child: SvgPicture(
+                              IconAssets.loader(
+                                IconAssets.getPath(
+                                  'arrows-rotate-clockwise-horizontal',
+                                ),
                               ),
                               width: 24,
                               height: 24,
@@ -136,8 +144,7 @@ class SettingsScreen extends ConsumerWidget {
                                 isDark: isDark,
                                 iconName: 'power',
                                 title: 'Start at startup',
-                                subtitle:
-                                    'Open Clue automatically when you log in',
+                                subtitle: 'Launch when you log in',
                                 trailing: _SettingsToggle(
                                   value: startAtStartup,
                                   onChanged: (value) async {
@@ -163,8 +170,7 @@ class SettingsScreen extends ConsumerWidget {
                                 isDark: isDark,
                                 iconName: 'menu',
                                 title: 'Menu bar only',
-                                subtitle:
-                                    'Hide Clue from the Dock and run from the menu bar',
+                                subtitle: 'Hide Clue from the dock',
                                 trailing: _SettingsToggle(
                                   value: menuBarOnly,
                                   onChanged: (value) async {
@@ -222,6 +228,114 @@ class SettingsScreen extends ConsumerWidget {
                             }
                           },
                         ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildSection(
+                    isDark: isDark,
+                    title: 'Appearance',
+                    child: Column(
+                      children: [
+                        _SettingsGlassCard(
+                          isDark: isDark,
+                          height: 72,
+                          child: _buildSettingsRow(
+                            isDark: isDark,
+                            iconName: 'alignLayout-bottom',
+                            title: 'Toast at bottom',
+                            subtitle: 'Show above the search bar',
+                            trailing: _SettingsToggle(
+                              value: toastFromBottom,
+                              onChanged: (value) async {
+                                await ref
+                                    .read(toastFromBottomProvider.notifier)
+                                    .setEnabled(value);
+                                if (context.mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    value
+                                        ? 'Toasts at the bottom'
+                                        : 'Toasts at the top',
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _SettingsGlassCard(
+                          isDark: isDark,
+                          height: 72,
+                          child: _buildSettingsRow(
+                            isDark: isDark,
+                            iconName: 'sparkles',
+                            title: 'Toast unblur',
+                            subtitle: 'Sharpen alerts as they slide in',
+                            trailing: _SettingsToggle(
+                              value: toastUnblurEnabled,
+                              onChanged: (value) async {
+                                await ref
+                                    .read(toastUnblurEnabledProvider.notifier)
+                                    .setEnabled(value);
+                                if (context.mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    value
+                                        ? 'Unblur effect on'
+                                        : 'Unblur effect off',
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _SettingsGlassCard(
+                          isDark: isDark,
+                          height: 72,
+                          child: _buildSettingsRow(
+                            isDark: isDark,
+                            iconName: 'magicWand',
+                            title: 'Subtle toast motion',
+                            subtitle: 'Short rise instead of a long slide',
+                            trailing: _SettingsToggle(
+                              value: toastSubtleMotion,
+                              onChanged: (value) async {
+                                await ref
+                                    .read(toastSubtleMotionProvider.notifier)
+                                    .setEnabled(value);
+                                if (context.mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    value
+                                        ? 'Subtle toast motion on'
+                                        : 'Classic toast motion on',
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildSection(
+                    isDark: isDark,
+                    title: 'Text Size',
+                    child: _SettingsGlassCard(
+                      isDark: isDark,
+                      height: 76,
+                      child: NoteTextSizeControl(
+                        isDark: isDark,
+                        index: noteTextSizeIndex,
+                        showBackground: false,
+                        onChanged: (value) {
+                          ref
+                              .read(noteTextSizeIndexProvider.notifier)
+                              .setIndex(value);
+                        },
                       ),
                     ),
                   ),
@@ -388,8 +502,8 @@ class SettingsScreen extends ConsumerWidget {
                       : AppTheme.charcoal100,
                 ),
               ),
-              child: SvgPicture.asset(
-                IconAssets.getPath('person-plus'),
+              child: SvgPicture(
+                IconAssets.loader(IconAssets.getPath('person-plus')),
                 width: 24,
                 height: 24,
                 colorFilter: ColorFilter.mode(
@@ -461,8 +575,8 @@ class SettingsScreen extends ConsumerWidget {
                     : _accountGreenBorder,
               ),
             ),
-            child: SvgPicture.asset(
-              IconAssets.getPath('person-checkmark'),
+            child: SvgPicture(
+              IconAssets.loader(IconAssets.getPath('person-checkmark')),
               width: 24,
               height: 24,
               colorFilter: const ColorFilter.mode(
@@ -516,14 +630,12 @@ class SettingsScreen extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SvgPicture.asset(
-          IconAssets.getPath(iconName),
+        SvgPicture(
+          IconAssets.loader(IconAssets.getPath(iconName)),
           width: 24,
           height: 24,
           colorFilter: ColorFilter.mode(
-            isDark
-                ? Colors.white.withValues(alpha: 0.5)
-                : AppTheme.charcoal400,
+            isDark ? Colors.white.withValues(alpha: 0.5) : AppTheme.charcoal400,
             BlendMode.srcIn,
           ),
         ),
@@ -671,10 +783,7 @@ class _SettingsGlassCard extends StatelessWidget {
 }
 
 class _SettingsToggle extends StatelessWidget {
-  const _SettingsToggle({
-    required this.value,
-    required this.onChanged,
-  });
+  const _SettingsToggle({required this.value, required this.onChanged});
 
   static const _width = 48.0;
   static const _height = 28.0;
@@ -703,8 +812,9 @@ class _SettingsToggle extends StatelessWidget {
                 child: AnimatedAlign(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
-                  alignment:
-                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: value
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Container(
                     width: _thumbSize,
                     height: _thumbSize,
@@ -747,10 +857,12 @@ class _SettingsToggleTrack extends StatelessWidget {
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeOutCubic,
       child: isOn
-          ? const PrimaryButtonSurface(
-              key: ValueKey(true),
-              borderRadius: 200,
-              blurBackground: false,
+          ? const SizedBox.expand(
+              child: PrimaryButtonSurface(
+                key: ValueKey(true),
+                borderRadius: 200,
+                blurBackground: false,
+              ),
             )
           : const _SettingsToggleOffTrack(key: ValueKey(false)),
     );

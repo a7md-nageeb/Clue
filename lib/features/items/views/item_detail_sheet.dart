@@ -10,9 +10,12 @@ import '../../../core/database/database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/custom_toast.dart';
+import '../../../core/haptics/app_haptics.dart';
 import '../../../core/constants/icon_assets.dart';
+import '../../settings/providers/settings_provider.dart';
 import 'edit_item_screen.dart'; // reuse IconPickerSheet
 import '../widgets/item_more_menu.dart';
+import '../widgets/note_text_size_sheet.dart';
 
 // ---------------------------------------------------------------------------
 // ItemDetailSheet  (also used for editing when item != null)
@@ -54,6 +57,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   /// Whether the title row is expanded (icon button + TextField visible).
   /// Starts true when editing an existing item or when initialTitle is given.
   late bool _showTitle;
+  late int _previewTextSizeIndex;
 
   @override
   void initState() {
@@ -77,6 +81,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
     _selectedIcon = widget.item.icon;
     _isPinned = widget.item.isPinned;
     _showInMenuBar = widget.item.showInMenuBar;
+    _previewTextSizeIndex = ref.read(noteTextSizeIndexProvider);
 
     // Show title row expanded when editing or when a pre-filled title exists
     _showTitle = true;
@@ -125,6 +130,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   }
 
   Future<void> _openIconPicker() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -149,6 +155,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fontSize = NoteTextSizes.scaledFrom(18, _previewTextSizeIndex);
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkSurface : AppTheme.lightBackground,
@@ -161,7 +168,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
               const SizedBox(height: 24),
               _buildBottomRow(isDark),
               const SizedBox(height: 16),
-              Expanded(child: _buildTextArea(isDark)),
+              Expanded(child: _buildTextArea(isDark, fontSize)),
             ],
           ),
         ),
@@ -181,7 +188,9 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_isEditing) _buildSaveButton(isDark),
-              if (_isEditing) const SizedBox(width: 8),
+              if (_isEditing) const SizedBox(width: 12),
+              _buildTextSizeButton(isDark),
+              const SizedBox(width: 12),
               _buildMoreButton(isDark),
             ],
           ),
@@ -204,6 +213,58 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
           isDark ? Colors.white : const Color(0xFF141414),
           BlendMode.srcIn,
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextSizeButton(bool isDark) {
+    final iconColor = ColorFilter.mode(
+      isDark ? Colors.white : const Color(0xFF141414),
+      BlendMode.srcIn,
+    );
+
+    return Semantics(
+      button: true,
+      label: 'Text size',
+      child: SecondaryButton(
+        height: 48,
+        padding: const EdgeInsets.all(12),
+        onTap: _showTextSizeSheet,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              IconAssets.getLinePath('text'),
+              width: 24,
+              height: 24,
+              colorFilter: iconColor,
+            ),
+            const SizedBox(width: 4),
+            SvgPicture.asset(
+              IconAssets.getLinePath('arrows-upDown-alt2'),
+              width: 24,
+              height: 24,
+              colorFilter: iconColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTextSizeSheet() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.18),
+      isScrollControlled: true,
+      useSafeArea: false,
+      builder: (_) => NoteTextSizeSheet(
+        initialIndex: _previewTextSizeIndex,
+        onChanged: (value) {
+          setState(() => _previewTextSizeIndex = value);
+        },
       ),
     );
   }
@@ -318,6 +379,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
     final text = _contentController.text;
     if (text.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: text));
+      AppHaptics.copySuccess();
       CustomToast.show(context, 'Copied to clipboard!', isSuccess: true);
     }
   }
@@ -418,7 +480,15 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
     );
   }
 
-  Widget _buildTextArea(bool isDark) {
+  Widget _buildTextArea(bool isDark, double fontSize) {
+    final style = GoogleFonts.nunito(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w500,
+      height: NoteTextSizes.lineHeightRatio,
+      letterSpacing: NoteTextSizes.letterSpacing,
+      color: isDark ? Colors.white : AppTheme.ocean900,
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: isDark
@@ -460,16 +530,10 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
-              style: GoogleFonts.nunito(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: isDark ? Colors.white : AppTheme.ocean900,
-              ),
+              style: style,
               decoration: InputDecoration(
                 hintText: 'Enter Text',
-                hintStyle: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
+                hintStyle: style.copyWith(
                   color: isDark ? Colors.white38 : const Color(0x590F2343),
                 ),
                 border: InputBorder.none,
@@ -620,8 +684,8 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (showIcon && iconPath != null)
-                      SvgPicture.asset(
-                        iconPath,
+                      SvgPicture(
+                        IconAssets.loader(iconPath),
                         width: 24,
                         height: 24,
                         colorFilter: ColorFilter.mode(
@@ -696,10 +760,12 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
                   ),
                 ),
                 child: Center(
-                  child: SvgPicture.asset(
-                    _selectedIcon != null
-                        ? IconAssets.getPath(iconName)
-                        : IconAssets.getLinePath('star'),
+                  child: SvgPicture(
+                    IconAssets.loader(
+                      _selectedIcon != null
+                          ? IconAssets.getPath(iconName)
+                          : IconAssets.getLinePath('star'),
+                    ),
                     width: 24,
                     height: 24,
                     colorFilter: const ColorFilter.mode(

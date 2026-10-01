@@ -20,6 +20,7 @@ import '../widgets/delete_item_sheet.dart';
 import '../widgets/item_more_menu.dart';
 import '../widgets/swipe_to_delete.dart';
 import '../../../core/sync/sync_service.dart';
+import '../../../core/widgets/widget_updater.dart';
 import '../../settings/views/settings_screen.dart';
 import '../../settings/providers/settings_provider.dart';
 
@@ -37,6 +38,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? _selectedCategory;
   String? _openSwipeItemId;
   bool _isTagsScrolled = false;
+  DateTime? _lastWidgetCopyToast;
 
   @override
   void initState() {
@@ -163,9 +165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       size: 20,
                       color: isTagActive
                           ? Colors.white
-                          : (isDark
-                                ? Colors.white70
-                                : AppTheme.charcoal900),
+                          : (isDark ? Colors.white70 : AppTheme.charcoal900),
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -175,9 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         fontSize: 16,
                         color: isTagActive
                             ? AppTheme.ocean100
-                            : (isDark
-                                  ? Colors.white38
-                                  : AppTheme.charcoal600),
+                            : (isDark ? Colors.white38 : AppTheme.charcoal600),
                       ),
                     ),
                   ],
@@ -192,8 +190,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildItemIcon(String? iconName, {Color? color, double size = 26}) {
     final assetPath = IconAssets.getPath(iconName ?? 'note');
-    return SvgPicture.asset(
-      assetPath,
+    return SvgPicture(
+      IconAssets.loader(assetPath),
       width: size,
       height: size,
       colorFilter: ColorFilter.mode(
@@ -201,6 +199,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         BlendMode.srcIn,
       ),
     );
+  }
+
+  void _showWidgetCopyToast(String? message) {
+    if (message == null || message.isEmpty) return;
+    final now = DateTime.now();
+    if (_lastWidgetCopyToast != null &&
+        now.difference(_lastWidgetCopyToast!) < const Duration(seconds: 2)) {
+      ref.read(pendingWidgetCopyProvider.notifier).setMessage(null);
+      return;
+    }
+    _lastWidgetCopyToast = now;
+    ref.read(pendingWidgetCopyProvider.notifier).setMessage(null);
+    AppHaptics.copySuccess();
+    CustomToast.show(context, 'Copied to clipboard!', isSuccess: true);
   }
 
   Future<void> _refreshItems() async {
@@ -225,6 +237,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
+    ref.listen<String?>(pendingWidgetCopyProvider, (previous, next) {
+      _showWidgetCopyToast(next);
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pendingLink = ref.read(pendingSharedLinkProvider);
@@ -235,6 +251,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(pendingCreateItemProvider.notifier).setPending(false);
         _showExpandingCreate(context);
       }
+      _showWidgetCopyToast(ref.read(pendingWidgetCopyProvider));
     });
 
     final filteredItemsAsync = ref.watch(filteredItemsProvider);
@@ -316,7 +333,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   alignment: Alignment.bottomCenter,
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                      bottom: defaultTargetPlatform ==
+                                      bottom:
+                                          defaultTargetPlatform ==
                                               TargetPlatform.macOS
                                           ? 24
                                           : 16,
@@ -1033,43 +1051,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           Row(
-        children: [
-          _buildItemIcon(
-            item.icon,
-            size: 20,
-            color: isDark ? Colors.white70 : AppTheme.primaryOcean,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              textToShow,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: NoteTextSizes.scaledFrom(16, textSizeIndex),
-                fontWeight: hasTitle ? FontWeight.w700 : FontWeight.w400,
-                color: isDark ? Colors.white : AppTheme.ocean900,
+            children: [
+              _buildItemIcon(
+                item.icon,
+                size: 20,
+                color: isDark ? Colors.white70 : AppTheme.primaryOcean,
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 24,
-            height: 24,
-            child: Padding(
-              padding: const EdgeInsets.all(2),
-              child: SvgPicture.asset(
-                IconAssets.getLinePath('copy'),
-                width: 20,
-                height: 20,
-                colorFilter: ColorFilter.mode(
-                  isDark ? Colors.white38 : AppTheme.charcoal500,
-                  BlendMode.srcIn,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  textToShow,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: NoteTextSizes.scaledFrom(16, textSizeIndex),
+                    fontWeight: hasTitle ? FontWeight.w700 : FontWeight.w400,
+                    color: isDark ? Colors.white : AppTheme.ocean900,
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: SvgPicture.asset(
+                    IconAssets.getLinePath('copy'),
+                    width: 20,
+                    height: 20,
+                    colorFilter: ColorFilter.mode(
+                      isDark ? Colors.white38 : AppTheme.charcoal500,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1103,11 +1121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         decoration: const BoxDecoration(
           borderRadius: radius,
           boxShadow: [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 2,
-              spreadRadius: 1,
-            ),
+            BoxShadow(color: Color(0x0A000000), blurRadius: 2, spreadRadius: 1),
           ],
         ),
         child: ClipRRect(

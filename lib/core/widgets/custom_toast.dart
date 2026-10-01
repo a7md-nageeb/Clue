@@ -22,10 +22,12 @@ class CustomToast {
     final overlayState = Overlay.of(context);
     var unblurEnabled = true;
     var fromBottom = true;
+    var subtleMotion = true;
     try {
       final container = ProviderScope.containerOf(context, listen: false);
       unblurEnabled = container.read(toastUnblurEnabledProvider);
       fromBottom = container.read(toastFromBottomProvider);
+      subtleMotion = container.read(toastSubtleMotionProvider);
     } catch (_) {}
 
     if (_current != null && _current!.mounted) {
@@ -40,6 +42,7 @@ class CustomToast {
         isSuccess: isSuccess,
         unblurEnabled: unblurEnabled,
         fromBottom: fromBottom,
+        subtleMotion: subtleMotion,
         actionLabel: actionLabel,
         onAction: onAction,
         onDismissed: () {
@@ -64,6 +67,7 @@ class _ToastWidget extends StatefulWidget {
   final bool isSuccess;
   final bool unblurEnabled;
   final bool fromBottom;
+  final bool subtleMotion;
   final String? actionLabel;
   final VoidCallback? onAction;
   final VoidCallback onDismissed;
@@ -74,6 +78,7 @@ class _ToastWidget extends StatefulWidget {
     required this.isSuccess,
     required this.unblurEnabled,
     required this.fromBottom,
+    required this.subtleMotion,
     this.actionLabel,
     this.onAction,
     required this.onDismissed,
@@ -91,6 +96,14 @@ class _ToastWidgetState extends State<_ToastWidget>
   static const _travel = 240.0;
   static const _maxBlur = 18.0;
   static const _enterCurve = Cubic(0.16, 1.05, 0.3, 1);
+
+  static const _subtleEnterDuration = Duration(milliseconds: 350);
+  static const _subtleExitDuration = Duration(milliseconds: 250);
+  static const _subtleTravel = 16.0;
+  static const _subtleMaxBlur = 2.0;
+  static const _subtleStartScale = 0.97;
+  static const _subtleCurve = Cubic(0.22, 1, 0.36, 1);
+
   static const _searchBarHeight = 64.0;
   static const _searchBarBottomGap = 20.0;
   static const _toastAboveBarGap = 12.0;
@@ -101,6 +114,7 @@ class _ToastWidgetState extends State<_ToastWidget>
   late final Animation<double> _slide;
   late final Animation<double> _blur;
   late final Animation<double> _opacity;
+  late final Animation<double> _scale;
   Timer? _holdTimer;
   bool _started = false;
   bool _dismissed = false;
@@ -108,6 +122,41 @@ class _ToastWidgetState extends State<_ToastWidget>
   @override
   void initState() {
     super.initState();
+    if (widget.subtleMotion) {
+      _initSubtleMotion();
+    } else {
+      _initClassicMotion();
+    }
+  }
+
+  void _initSubtleMotion() {
+    _controller = AnimationController(
+      vsync: this,
+      duration: _subtleEnterDuration,
+      reverseDuration: _subtleExitDuration,
+    );
+
+    // Flipped on reverse so the exit also starts fast and eases out.
+    final motion = CurvedAnimation(
+      parent: _controller,
+      curve: _subtleCurve,
+      reverseCurve: _subtleCurve.flipped,
+    );
+
+    _slide = Tween<double>(
+      begin: widget.fromBottom ? _subtleTravel : -_subtleTravel,
+      end: 0,
+    ).animate(motion);
+    _blur = Tween<double>(
+      begin: widget.unblurEnabled ? _subtleMaxBlur : 0,
+      end: 0,
+    ).animate(motion);
+    _opacity = Tween<double>(begin: 0, end: 1).animate(motion);
+    _scale = Tween<double>(begin: _subtleStartScale, end: 1).animate(motion);
+  }
+
+  void _initClassicMotion() {
+    _scale = const AlwaysStoppedAnimation(1);
     _controller = AnimationController(
       vsync: this,
       duration: _enterDuration,
@@ -124,16 +173,14 @@ class _ToastWidgetState extends State<_ToastWidget>
       begin: widget.fromBottom ? _travel : -_travel,
       end: 0,
     ).animate(motion);
-    _blur = Tween<double>(
-      begin: widget.unblurEnabled ? _maxBlur : 0,
-      end: 0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.82, curve: _enterCurve),
-        reverseCurve: const Interval(0.2, 1, curve: Curves.easeIn),
-      ),
-    );
+    _blur = Tween<double>(begin: widget.unblurEnabled ? _maxBlur : 0, end: 0)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.82, curve: _enterCurve),
+            reverseCurve: const Interval(0.2, 1, curve: Curves.easeIn),
+          ),
+        );
     _opacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
@@ -198,9 +245,7 @@ class _ToastWidgetState extends State<_ToastWidget>
 
     final padding = MediaQuery.paddingOf(context);
     final ime = MediaQuery.viewInsetsOf(context).bottom;
-    final bottomOffset = ime > 0
-        ? ime + 12
-        : padding.bottom + _bottomClearance;
+    final bottomOffset = ime > 0 ? ime + 12 : padding.bottom + _bottomClearance;
 
     return Positioned(
       top: widget.fromBottom ? null : padding.top + 16,
@@ -228,7 +273,7 @@ class _ToastWidgetState extends State<_ToastWidget>
               opacity: _opacity.value,
               child: Transform.translate(
                 offset: Offset(0, _slide.value),
-                child: toast,
+                child: Transform.scale(scale: _scale.value, child: toast),
               ),
             );
           },

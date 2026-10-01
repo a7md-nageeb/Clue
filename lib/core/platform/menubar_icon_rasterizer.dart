@@ -44,7 +44,7 @@ class MenuBarIconRasterizer {
 
     try {
       final pictureInfo = await vg.loadPicture(
-        SvgAssetLoader(assetPath),
+        IconAssets.loader(assetPath),
         null,
       );
 

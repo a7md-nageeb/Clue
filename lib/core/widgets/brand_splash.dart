@@ -35,11 +35,7 @@ class _BrandSplashHostState extends State<BrandSplashHost>
   @override
   void initState() {
     super.initState();
-    _fade = AnimationController(
-      vsync: this,
-      duration: _fadeDuration,
-      value: 1,
-    );
+    _fade = AnimationController(vsync: this, duration: _fadeDuration, value: 1);
     WidgetsBinding.instance.addObserver(this);
     if (widget.showOnLaunch && _isMobile) {
       _visible = true;

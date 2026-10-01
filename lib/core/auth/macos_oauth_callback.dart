@@ -26,9 +26,7 @@ Future<AuthSessionUrlResponse> waitForMacOsOAuthCallback({
     final uri = request.requestedUri;
 
     if (uri.path != expectedPath) {
-      throw AuthException(
-        'Unexpected OAuth callback path: ${uri.path}',
-      );
+      throw AuthException('Unexpected OAuth callback path: ${uri.path}');
     }
 
     request.response

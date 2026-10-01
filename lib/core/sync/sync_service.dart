@@ -23,9 +23,11 @@ class SyncStateNotifier extends Notifier<SyncState> {
   }
 }
 
-final lastSyncedAtProvider = NotifierProvider<LastSyncedAtNotifier, DateTime?>(() {
-  return LastSyncedAtNotifier();
-});
+final lastSyncedAtProvider = NotifierProvider<LastSyncedAtNotifier, DateTime?>(
+  () {
+    return LastSyncedAtNotifier();
+  },
+);
 
 class LastSyncedAtNotifier extends Notifier<DateTime?> {
   static const _key = 'last_synced_at';
@@ -117,7 +119,9 @@ class SyncService {
     }
 
     if (!_authService.isAuthenticated) {
-      _ref.read(syncStateProvider.notifier).setState(SyncState.synced); // Nothing to sync if guest
+      _ref
+          .read(syncStateProvider.notifier)
+          .setState(SyncState.synced); // Nothing to sync if guest
       return;
     }
 
@@ -175,44 +179,36 @@ class SyncService {
         if (item.syncStatus == 'pending_delete') {
           // If soft deleted locally, perform soft delete or delete on Supabase
           if (item.userId != null) {
-            await _upsertItem(
-              client,
-              {
-                'id': item.id,
-                'user_id': item.userId,
-                'title': item.title,
-                'content': item.content,
-                'icon': item.icon,
-                'is_pinned': item.isPinned,
-                'created_at': item.createdAt.toIso8601String(),
-                'updated_at': item.updatedAt.toIso8601String(),
-                'deleted_at':
-                    item.deletedAt?.toIso8601String() ??
-                    DateTime.now().toUtc().toIso8601String(),
-              },
-              showInMenuBar: item.showInMenuBar,
-            );
+            await _upsertItem(client, {
+              'id': item.id,
+              'user_id': item.userId,
+              'title': item.title,
+              'content': item.content,
+              'icon': item.icon,
+              'is_pinned': item.isPinned,
+              'created_at': item.createdAt.toIso8601String(),
+              'updated_at': item.updatedAt.toIso8601String(),
+              'deleted_at':
+                  item.deletedAt?.toIso8601String() ??
+                  DateTime.now().toUtc().toIso8601String(),
+            }, showInMenuBar: item.showInMenuBar);
           }
           // After successful sync of delete, purge it from local DB to save space
           await _db.hardDeleteItem(item.id);
         } else if (item.syncStatus == 'pending_insert' ||
             item.syncStatus == 'pending_update') {
           if (item.userId != null) {
-            await _upsertItem(
-              client,
-              {
-                'id': item.id,
-                'user_id': item.userId,
-                'title': item.title,
-                'content': item.content,
-                'icon': item.icon,
-                'is_pinned': item.isPinned,
-                'created_at': item.createdAt.toIso8601String(),
-                'updated_at': item.updatedAt.toIso8601String(),
-                'deleted_at': item.deletedAt?.toIso8601String(),
-              },
-              showInMenuBar: item.showInMenuBar,
-            );
+            await _upsertItem(client, {
+              'id': item.id,
+              'user_id': item.userId,
+              'title': item.title,
+              'content': item.content,
+              'icon': item.icon,
+              'is_pinned': item.isPinned,
+              'created_at': item.createdAt.toIso8601String(),
+              'updated_at': item.updatedAt.toIso8601String(),
+              'deleted_at': item.deletedAt?.toIso8601String(),
+            }, showInMenuBar: item.showInMenuBar);
           }
           // Mark as synced locally
           await _db.saveItem(item.copyWith(syncStatus: 'synced'));

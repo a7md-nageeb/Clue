@@ -1,47 +1,75 @@
 package com.forgottenthings.forgotten_things
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.os.Process
+import android.os.SystemClock
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
-import android.content.Intent
 
 class MainActivity : FlutterFragmentActivity() {
-    private val CHANNEL = "com.forgottenthings.forgotten_things/widget"
+    private val channelName = "com.forgottenthings.forgotten_things/widget"
+    private var methodChannel: MethodChannel? = null
+    private var pendingCreate = false
+    private var isWarmLaunch = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        val processAgeMs = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()
+        isWarmLaunch = savedInstanceState == null && processAgeMs >= 2500L
+        super.onCreate(savedInstanceState)
+        captureCreateIntent(intent)
+    }
+
+    override fun getDartEntrypointArgs(): MutableList<String> {
+        val args = super.getDartEntrypointArgs()?.toMutableList() ?: mutableListOf()
+        if (isWarmLaunch) {
+            args.add("warm")
+        }
+        return args
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "updateWidget") {
-                updateAllWidgets()
-                result.success(null)
-            } else {
-                result.notImplemented()
+        methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName)
+        methodChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "updateWidget" -> {
+                    ForgottenThingsWidgetProvider.refreshAll(applicationContext)
+                    result.success(null)
+                }
+                "consumePendingCopy" -> result.success(null)
+                "getWidgetDataDirectory" -> {
+                    val dir = WidgetDataStore.dataDirectory(applicationContext)
+                    dir.mkdirs()
+                    result.success(dir.absolutePath)
+                }
+                else -> result.notImplemented()
             }
         }
+        if (pendingCreate) {
+            pendingCreate = false
+            methodChannel?.invokeMethod("openCreate", null)
+        }
     }
 
-    private fun updateAllWidgets() {
-        val context = applicationContext
-        
-        // 1. Notify OS to call onUpdate for all widgets
-        val intent = Intent(context, ForgottenThingsWidgetProvider::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-            val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(
-                ComponentName(context, ForgottenThingsWidgetProvider::class.java)
-            )
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (isCreateIntent(intent)) {
+            methodChannel?.invokeMethod("openCreate", null) ?: run { pendingCreate = true }
         }
-        sendBroadcast(intent)
-        
-        // 2. Notify OS that the list data has changed to refresh ListView adapter
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-        val componentName = ComponentName(context, ForgottenThingsWidgetProvider::class.java)
-        appWidgetManager.notifyAppWidgetViewDataChanged(
-            appWidgetManager.getAppWidgetIds(componentName),
-            R.id.widget_list
-        )
+    }
+
+    private fun captureCreateIntent(intent: Intent?) {
+        if (isCreateIntent(intent)) {
+            pendingCreate = true
+        }
+    }
+
+    private fun isCreateIntent(intent: Intent?): Boolean {
+        val data: Uri? = intent?.data
+        return data?.scheme == "forgotten-things" && data.host == "create"
     }
 }
-

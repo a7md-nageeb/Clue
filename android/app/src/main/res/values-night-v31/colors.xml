@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material 3 widget roles, matching androidx.glance dynamic colors. -->
+<resources>
+    <!-- widgetBackground -->
+    <color name="widget_background">@android:color/system_accent2_800</color>
+    <!-- surface -->
+    <color name="widget_card_background">@android:color/system_neutral1_900</color>
+    <color name="widget_card_stroke">@android:color/transparent</color>
+    <!-- onSurface -->
+    <color name="widget_text_primary">@android:color/system_neutral1_100</color>
+    <!-- onSurfaceVariant -->
+    <color name="widget_text_secondary">@android:color/system_neutral2_200</color>
+    <color name="widget_text_chip">@android:color/system_neutral2_200</color>
+    <!-- primary / onPrimary / primaryContainer -->
+    <color name="widget_accent">@android:color/system_accent1_200</color>
+    <color name="widget_accent_on">@android:color/system_accent1_800</color>
+    <color name="widget_accent_muted">@android:color/system_accent1_700</color>
+    <!-- outlineVariant -->
+    <color name="widget_chip_idle">@android:color/transparent</color>
+    <color name="widget_chip_stroke">@android:color/system_neutral2_600</color>
+    <color name="widget_chip_stroke_active">@android:color/system_accent1_200</color>
+    <color name="widget_divider">@android:color/system_neutral2_600</color>
+</resources>

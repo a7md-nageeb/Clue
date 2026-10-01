@@ -1,1 +1,4 @@
 #include "ephemeral/Flutter-Generated.xcconfig"
+
+// Xcode 27's lipo rejects Flutter's universal -verify_arch check.
+ARCHS = arm64

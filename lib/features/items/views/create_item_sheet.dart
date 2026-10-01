@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/custom_toast.dart';
 import '../../../core/constants/icon_assets.dart';
+import '../../settings/providers/settings_provider.dart';
 import 'edit_item_screen.dart'; // reuse IconPickerSheet
 
 // ---------------------------------------------------------------------------
@@ -134,6 +135,7 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
   }
 
   Future<void> _openIconPicker() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -479,8 +481,8 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
           ),
           child: Row(
             children: [
-              SvgPicture.asset(
-                iconPath,
+              SvgPicture(
+                IconAssets.loader(iconPath),
                 width: 20,
                 height: 20,
                 colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
@@ -511,6 +513,10 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fontSize = NoteTextSizes.scaledFrom(
+      18,
+      ref.watch(noteTextSizeIndexProvider),
+    );
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.darkSurface : AppTheme.lightBackground,
@@ -523,7 +529,7 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
               const SizedBox(height: 24),
               _buildBottomRow(isDark),
               const SizedBox(height: 16),
-              Expanded(child: _buildTextArea(isDark)),
+              Expanded(child: _buildTextArea(isDark, fontSize)),
             ],
           ),
         ),
@@ -602,8 +608,15 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
     );
   }
 
-  Widget _buildTextArea(bool isDark) {
+  Widget _buildTextArea(bool isDark, double fontSize) {
     final isActive = _contentFocusNode.hasFocus;
+    final style = GoogleFonts.nunito(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w500,
+      height: NoteTextSizes.lineHeightRatio,
+      letterSpacing: NoteTextSizes.letterSpacing,
+      color: isDark ? Colors.white : AppTheme.ocean900,
+    );
     return Container(
       decoration: BoxDecoration(
         color: isDark
@@ -640,16 +653,10 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
         maxLines: null,
         expands: true,
         textAlignVertical: TextAlignVertical.top,
-        style: GoogleFonts.nunito(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: isDark ? Colors.white : AppTheme.ocean900,
-        ),
+        style: style,
         decoration: InputDecoration(
           hintText: 'Enter Text',
-          hintStyle: GoogleFonts.nunito(
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
+          hintStyle: style.copyWith(
             color: isDark ? Colors.white38 : const Color(0x590F2343),
           ),
           border: InputBorder.none,
@@ -794,8 +801,8 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (showIcon && iconPath != null)
-                      SvgPicture.asset(
-                        iconPath,
+                      SvgPicture(
+                        IconAssets.loader(iconPath),
                         width: 24,
                         height: 24,
                         colorFilter: ColorFilter.mode(
@@ -869,10 +876,12 @@ class _CreateItemSheetState extends ConsumerState<CreateItemSheet> {
                   ),
                 ),
                 child: Center(
-                  child: SvgPicture.asset(
-                    _selectedIcon != null
-                        ? IconAssets.getPath(iconName)
-                        : IconAssets.getLinePath('star'),
+                  child: SvgPicture(
+                    IconAssets.loader(
+                      _selectedIcon != null
+                          ? IconAssets.getPath(iconName)
+                          : IconAssets.getLinePath('star'),
+                    ),
                     width: 24,
                     height: 24,
                     colorFilter: const ColorFilter.mode(

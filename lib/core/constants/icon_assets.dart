@@ -1,6 +1,9 @@
 // Generated file - do not edit manually.
 // Contains lists of SVG icons grouped by categories.
 
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vector_graphics/vector_graphics.dart';
+
 class IconAssets {
   static const String basePath = 'assets/icons';
   static const String lineBasePath = 'assets/icons/line';
@@ -745,9 +748,9 @@ class IconAssets {
   };
 
   /// A flat list of all available icon names.
-  static final List<String> allIcons = categorizedIcons.values
+  static final Set<String> allIcons = categorizedIcons.values
       .expand((list) => list)
-      .toList();
+      .toSet();
 
   /// Gets the full asset path for a given icon name.
   static String getPath(String iconName) {
@@ -800,4 +803,14 @@ class IconAssets {
 
   static const String solidBasePath = 'assets/icons/solid';
   static String getSolidPath(String name) => '$solidBasePath/$name.svg';
+
+  /// Returns a loader for any SVG asset path. Files directly inside
+  /// [basePath] are compiled to vector_graphics binaries by the pubspec asset
+  /// transformer, so `SvgPicture.asset` cannot parse them.
+  static BytesLoader loader(String assetPath) {
+    final isCompiled =
+        assetPath.startsWith('$basePath/') &&
+        !assetPath.substring(basePath.length + 1).contains('/');
+    return isCompiled ? AssetBytesLoader(assetPath) : SvgAssetLoader(assetPath);
+  }
 }

@@ -22,6 +22,9 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <meta-data
+              android:name="io.flutter.embedding.android.EnableImpeller"
+              android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -39,22 +42,51 @@
                 <data android:scheme="io.supabase.forgotten-things"
                       android:host="login-callback" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="forgotten-things"
+                      android:host="create" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".WidgetCopyActivity"
+            android:autoRemoveFromRecents="true"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity="com.forgottenthings.forgotten_things.copy"
+            android:theme="@style/Theme.WidgetCopy" />
+
+        <activity
+            android:name=".WidgetConfigureActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity="com.forgottenthings.forgotten_things.configure"
+            android:theme="@style/Theme.WidgetConfigure">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
         </activity>
 
         <!-- App Widget Provider -->
         <receiver android:name=".ForgottenThingsWidgetProvider"
-                  android:exported="true">
+                  android:exported="true"
+                  android:label="Clue">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.forgottenthings.forgotten_things.ACTION_COPY" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider"
                        android:resource="@xml/widget_info" />
         </receiver>
 
-        <!-- RemoteViews Service for the list widget -->
-        <service android:name=".ForgottenThingsWidgetService"
-                 android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <service
+            android:name=".ForgottenThingsWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

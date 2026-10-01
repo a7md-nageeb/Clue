@@ -38,7 +38,9 @@ class MenuBarService {
     try {
       final itemPayloads = <Map<String, dynamic>>[];
       for (final item in items) {
-        final iconPng = await MenuBarIconRasterizer.rasterizeItemIcon(item.icon);
+        final iconPng = await MenuBarIconRasterizer.rasterizeItemIcon(
+          item.icon,
+        );
         if (generation != _updateGeneration) return;
 
         itemPayloads.add({
@@ -51,9 +53,7 @@ class MenuBarService {
 
       if (generation != _updateGeneration) return;
 
-      await _channel.invokeMethod<void>('updateItems', {
-        'items': itemPayloads,
-      });
+      await _channel.invokeMethod<void>('updateItems', {'items': itemPayloads});
     } catch (e) {
       debugPrint('MenuBarService.updateItems skipped: $e');
     }

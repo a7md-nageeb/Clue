@@ -24,15 +24,27 @@ class MainFlutterWindow: NSWindow {
     setupMenuBarChannel(messenger: flutterViewController.engine.binaryMessenger)
     MenuBarController.shared.setup(mainWindow: self)
 
-    if AppAppearanceController.isMenuBarOnlyEnabled() {
-      orderOut(nil)
-    }
-
+    title = "Clue"
     super.awakeFromNib()
+    centerOnVisibleScreen(size: defaultContentSize)
+    NSApp.unhide(nil)
+    makeKeyAndOrderFront(nil)
+    orderFrontRegardless()
+    NSApp.activate(ignoringOtherApps: true)
+  }
 
-    DispatchQueue.main.async { [weak self] in
-      self?.setContentSize(defaultContentSize)
+  private func centerOnVisibleScreen(size: NSSize) {
+    let visible = (screen ?? NSScreen.main)?.visibleFrame
+    guard let visible else {
+      setContentSize(size)
+      center()
+      return
     }
+    let width = min(max(size.width, minSize.width), max(visible.width - 40, minSize.width))
+    let height = min(max(size.height, minSize.height), max(visible.height - 40, minSize.height))
+    let x = visible.midX - width / 2
+    let y = visible.midY - height / 2
+    setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
   }
 
   private func setupSystemChannel(messenger: FlutterBinaryMessenger) {
@@ -54,7 +66,9 @@ class MainFlutterWindow: NSWindow {
         result(AppAppearanceController.isMenuBarOnlyEnabled())
       case "setMenuBarOnly":
         if let enabled = call.arguments as? Bool {
-          result(AppAppearanceController.setMenuBarOnly(enabled, hideWindows: false))
+          AppAppearanceController.setMenuBarOnly(enabled, hideWindows: false) { success in
+            result(success)
+          }
         } else {
           result(false)
         }

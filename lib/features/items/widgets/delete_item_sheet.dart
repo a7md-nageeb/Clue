@@ -24,10 +24,7 @@ Future<bool> showDeleteItemSheet({
       transitionDuration: const Duration(milliseconds: 280),
       reverseTransitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (context, animation, secondaryAnimation) {
-        return DeleteItemSheet(
-          item: item,
-          animation: animation,
-        );
+        return DeleteItemSheet(item: item, animation: animation);
       },
     ),
   );
@@ -245,11 +242,7 @@ class _SheetSurface extends StatelessWidget {
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 2,
-            spreadRadius: 1,
-          ),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 2, spreadRadius: 1),
         ],
       ),
       child: ClipRRect(
@@ -320,11 +313,7 @@ class _TrashBadge extends StatelessWidget {
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.all(Radius.circular(200)),
         boxShadow: [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 2,
-            spreadRadius: 1,
-          ),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 2, spreadRadius: 1),
         ],
       ),
       child: ClipRRect(
@@ -391,8 +380,8 @@ class _ItemPreviewCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SvgPicture.asset(
-            IconAssets.getPath(iconName ?? 'note'),
+          SvgPicture(
+            IconAssets.loader(IconAssets.getPath(iconName ?? 'note')),
             width: 20,
             height: 20,
             colorFilter: ColorFilter.mode(
@@ -422,11 +411,7 @@ class _ItemPreviewCard extends StatelessWidget {
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.all(Radius.circular(16)),
         boxShadow: [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 2,
-            spreadRadius: 1,
-          ),
+          BoxShadow(color: Color(0x0A000000), blurRadius: 2, spreadRadius: 1),
         ],
       ),
       child: ClipRRect(

@@ -20,9 +20,10 @@ class SearchQueryNotifier extends Notifier<String> {
 }
 
 // Provider to store any incoming shared text/link from other apps
-final pendingSharedLinkProvider = NotifierProvider<PendingSharedLinkNotifier, String?>(() {
-  return PendingSharedLinkNotifier();
-});
+final pendingSharedLinkProvider =
+    NotifierProvider<PendingSharedLinkNotifier, String?>(() {
+      return PendingSharedLinkNotifier();
+    });
 
 class PendingSharedLinkNotifier extends Notifier<String?> {
   @override
@@ -195,8 +196,8 @@ class ItemOperations {
     final syncStatus = _userId == null
         ? 'synced'
         : (item.syncStatus == 'pending_insert'
-            ? 'pending_insert'
-            : 'pending_update');
+              ? 'pending_insert'
+              : 'pending_update');
     await _db.saveItem(
       item.copyWith(
         deletedAt: const Value(null),

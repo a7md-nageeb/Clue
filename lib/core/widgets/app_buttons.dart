@@ -43,8 +43,8 @@ class PrimaryButtonSurface extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: !blurBackground ||
-                defaultTargetPlatform == TargetPlatform.android
+        child:
+            !blurBackground || defaultTargetPlatform == TargetPlatform.android
             ? surface
             : BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -256,10 +256,7 @@ class SecondaryButton extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
+      child: Padding(padding: padding, child: child),
     );
 
     return GestureDetector(

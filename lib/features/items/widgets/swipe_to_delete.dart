@@ -88,7 +88,8 @@ class _SwipeToDeleteState extends State<SwipeToDelete>
   }
 
   void _onDragEnd(DragEndDetails details) {
-    final velocity = -details.velocity.pixelsPerSecond.dx / SwipeToDelete.extent;
+    final velocity =
+        -details.velocity.pixelsPerSecond.dx / SwipeToDelete.extent;
     final shouldOpen = _progress.value > 0.38 || velocity > 1.6;
     if (shouldOpen && !_hapticFired) {
       HapticFeedback.mediumImpact();
@@ -150,8 +151,8 @@ class _SwipeDeleteButton extends StatelessWidget {
       child: CustomPaint(
         painter: _DeleteButtonEffectPainter(),
         child: Center(
-          child: SvgPicture.asset(
-            IconAssets.getPath('bin'),
+          child: SvgPicture(
+            IconAssets.loader(IconAssets.getPath('bin')),
             width: 24,
             height: 24,
             fit: BoxFit.contain,
@@ -169,11 +170,7 @@ class _SwipeDeleteButton extends StatelessWidget {
         decoration: const BoxDecoration(
           borderRadius: radius,
           boxShadow: [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 2,
-              spreadRadius: 1,
-            ),
+            BoxShadow(color: Color(0x0A000000), blurRadius: 2, spreadRadius: 1),
           ],
         ),
         child: ClipRRect(

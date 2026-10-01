@@ -36,7 +36,9 @@ class AppTheme {
 
   // Semantic Colors
   static const Color green = Color(0xFF2CC75C); // Success ⭐
+  static const Color coral50 = Color(0xFFFFEFEF);
   static const Color coral = Color(0xFFFF6464); // Error / Delete ⭐
+  static const Color coral600 = Color(0xFF992929);
   static const Color orange = Color(0xFFBA6B27); // Warning ⭐
   static const Color teal = Color(0xFF3BC9BC); // Accent 2 ⭐
   static const Color yellow = Color(0xFFFFDC49); // Highlight ⭐

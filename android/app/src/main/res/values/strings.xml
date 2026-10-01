@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Your forgotten things, one tap to copy.</string>
+    <string name="widget_empty">No forgotten things yet.</string>
+    <string name="widget_open">Open Clue</string>
+    <string name="widget_copy">Copy</string>
+    <string name="widget_chip_all">All %1$d</string>
+    <string name="widget_chip_all_description">Show all %1$d items</string>
+    <string name="widget_chip_description">Show %1$d %2$s items</string>
+    <string name="widget_configure_title">Categories to show as chips</string>
+    <string name="widget_configure_empty">Add items in Clue first. Their categories will appear here.</string>
+    <string name="widget_configure_save">Save</string>
+    <string name="widget_configure_most_used">Use most used</string>
+    <string name="widget_configure_item_count">%1$s · %2$d</string>
+</resources>

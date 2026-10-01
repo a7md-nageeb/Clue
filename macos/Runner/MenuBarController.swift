@@ -37,17 +37,42 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     self.mainWindow = mainWindow
 
     if statusItem == nil {
-      let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-      statusItem = item
-
-      if let button = item.button {
-        button.image = Self.loadMenuBarIcon()
-        button.image?.accessibilityDescription = "Clue"
-        button.imageScaling = .scaleProportionallyDown
-      }
+      createStatusItem()
     }
 
     rebuildMenu()
+  }
+
+  /// Recreates the status item after activation policy changes.
+  /// NSStatusItem must be created at the correct window layer for the current policy.
+  func recreateStatusItem() {
+    if let statusItem {
+      NSStatusBar.system.removeStatusItem(statusItem)
+      self.statusItem = nil
+    }
+    createStatusItem()
+    rebuildMenu()
+  }
+
+  private func createStatusItem() {
+    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    statusItem = item
+
+    if let button = item.button {
+      if let icon = Self.loadMenuBarIcon() {
+        button.image = icon
+        button.image?.accessibilityDescription = "Clue"
+        button.imageScaling = .scaleProportionallyDown
+      } else if let fallback = NSImage(
+        systemSymbolName: "checklist",
+        accessibilityDescription: "Clue"
+      ) {
+        fallback.isTemplate = true
+        button.image = fallback
+      } else {
+        button.title = "Clue"
+      }
+    }
   }
 
   func updateItems(_ payload: [String: Any]) {
@@ -149,16 +174,20 @@ final class MenuBarController: NSObject, NSMenuDelegate {
   }
 
   @objc private func openMainWindow() {
-    NSApp.activate(ignoringOtherApps: true)
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
 
-    if let mainWindow {
-      mainWindow.makeKeyAndOrderFront(nil)
-      return
-    }
+      NSApp.activate(ignoringOtherApps: true)
 
-    for window in NSApp.windows where window.canBecomeMain {
-      window.makeKeyAndOrderFront(nil)
-      break
+      if let mainWindow = self.mainWindow {
+        mainWindow.makeKeyAndOrderFront(nil)
+        return
+      }
+
+      for window in NSApp.windows where window.canBecomeMain {
+        window.makeKeyAndOrderFront(nil)
+        break
+      }
     }
   }
 

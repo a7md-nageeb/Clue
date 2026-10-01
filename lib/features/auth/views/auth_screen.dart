@@ -134,8 +134,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   }
 
   void _openEmailAuth() {
-    if (_revealAnimation.value < 1 ||
-        _emailTransitionController.isAnimating) {
+    if (_revealAnimation.value < 1 || _emailTransitionController.isAnimating) {
       return;
     }
     _emailTransitionController.forward();
@@ -302,74 +301,75 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: Scaffold(
-        backgroundColor: AppTheme.primaryOcean,
-        resizeToAvoidBottomInset: false,
-        body: SafeArea(
-          bottom: false,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return AnimatedBuilder(
-                animation: Listenable.merge([
-                  _revealAnimation,
-                  _emailTransition,
-                ]),
-                builder: (context, child) {
-                  final revealT = _revealAnimation.value;
-                  final emailT = _emailTransition.value;
-                  final fullSheetHeight = _fullSheetHeight(
-                    constraints.maxHeight,
-                    bottomPadding,
-                    keyboardInset,
-                    emailT,
-                  );
-                  final sheetSlideOffset = (1 - revealT) * fullSheetHeight;
-                  final logoBottomInset = fullSheetHeight * revealT;
+          backgroundColor: AppTheme.primaryOcean,
+          resizeToAvoidBottomInset: false,
+          body: SafeArea(
+            bottom: false,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return AnimatedBuilder(
+                  animation: Listenable.merge([
+                    _revealAnimation,
+                    _emailTransition,
+                  ]),
+                  builder: (context, child) {
+                    final revealT = _revealAnimation.value;
+                    final emailT = _emailTransition.value;
+                    final fullSheetHeight = _fullSheetHeight(
+                      constraints.maxHeight,
+                      bottomPadding,
+                      keyboardInset,
+                      emailT,
+                    );
+                    final sheetSlideOffset = (1 - revealT) * fullSheetHeight;
+                    final logoBottomInset = fullSheetHeight * revealT;
 
-                  return Stack(
-                    fit: StackFit.expand,
-                    clipBehavior: Clip.hardEdge,
-                    children: [
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: logoBottomInset,
-                        child: Center(
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 48),
-                            child: const _AuthBrandingContent(),
+                    return Stack(
+                      fit: StackFit.expand,
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: logoBottomInset,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 48,
+                              ),
+                              child: const _AuthBrandingContent(),
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: fullSheetHeight,
-                        child: ClipRect(
-                          child: Transform.translate(
-                            offset: Offset(0, sheetSlideOffset),
-                            child: IgnorePointer(
-                              ignoring: revealT < 1,
-                              child: _buildBottomSheetSection(
-                                bottomPadding: bottomPadding,
-                                keyboardInset: keyboardInset,
-                                maxWidth: constraints.maxWidth,
-                                bodyHeight: constraints.maxHeight,
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: fullSheetHeight,
+                          child: ClipRect(
+                            child: Transform.translate(
+                              offset: Offset(0, sheetSlideOffset),
+                              child: IgnorePointer(
+                                ignoring: revealT < 1,
+                                child: _buildBottomSheetSection(
+                                  bottomPadding: bottomPadding,
+                                  keyboardInset: keyboardInset,
+                                  maxWidth: constraints.maxWidth,
+                                  bodyHeight: constraints.maxHeight,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -384,7 +384,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final signInHeight = _estimatedSignInContentHeight(bodyHeight);
     final emailHeight = _estimatedEmailContentHeight(bodyHeight);
     final visibleHeight = _contentHeightForEmailTransition(bodyHeight, emailT);
-    final carouselHeight = signInHeight > emailHeight ? signInHeight : emailHeight;
+    final carouselHeight = signInHeight > emailHeight
+        ? signInHeight
+        : emailHeight;
 
     return _AuthGlassSheetShell(
       bottomPadding: bottomPadding,
@@ -414,14 +416,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           showApple: _showApple,
                           isGoogleLoading: _isGoogleLoading,
                           isAppleLoading: _isAppleLoading,
-                          onGoogleTap:
-                              (_isGoogleLoading || _isAppleLoading)
-                                  ? null
-                                  : _signInWithGoogle,
-                          onAppleTap:
-                              (_isGoogleLoading || _isAppleLoading)
-                                  ? null
-                                  : _signInWithApple,
+                          onGoogleTap: (_isGoogleLoading || _isAppleLoading)
+                              ? null
+                              : _signInWithGoogle,
+                          onAppleTap: (_isGoogleLoading || _isAppleLoading)
+                              ? null
+                              : _signInWithApple,
                           onEmailTap: _openEmailAuth,
                           onGuestTap: () {
                             ref.read(guestModeProvider.notifier).state = true;
@@ -449,11 +449,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           emailController: _emailController,
                           passwordController: _passwordController,
                           onBack: _closeEmailAuth,
-                          onSubmit:
-                              _isEmailLoading ? null : _submitEmailAuth,
-                          onModeChanged: (isSignUp) => setState(
-                            () => _isEmailSignUp = isSignUp,
-                          ),
+                          onSubmit: _isEmailLoading ? null : _submitEmailAuth,
+                          onModeChanged: (isSignUp) =>
+                              setState(() => _isEmailSignUp = isSignUp),
                         ),
                       ),
                     ),
@@ -537,12 +535,28 @@ class _AuthSignInSheetContent extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        _SocialAuthButton(
+          label: 'Continue with Google',
+          isLoading: isGoogleLoading,
+          onTap: onGoogleTap,
+          icon: SvgPicture.asset(
+            'assets/google_logo.svg',
+            width: 24,
+            height: 24,
+            colorFilter: const ColorFilter.mode(
+              AppTheme.charcoal50,
+              BlendMode.srcIn,
+            ),
+          ),
+        ),
+        if (showApple) ...[
+          const SizedBox(height: 16),
           _SocialAuthButton(
-            label: 'Continue with Google',
-            isLoading: isGoogleLoading,
-            onTap: onGoogleTap,
-            icon: SvgPicture.asset(
-              'assets/google_logo.svg',
+            label: 'Continue with Apple',
+            isLoading: isAppleLoading,
+            onTap: onAppleTap,
+            icon: SvgPicture(
+              IconAssets.loader(IconAssets.getPath('apple')),
               width: 24,
               height: 24,
               colorFilter: const ColorFilter.mode(
@@ -551,98 +565,72 @@ class _AuthSignInSheetContent extends StatelessWidget {
               ),
             ),
           ),
-          if (showApple) ...[
-            const SizedBox(height: 16),
-            _SocialAuthButton(
-              label: 'Continue with Apple',
-              isLoading: isAppleLoading,
-              onTap: onAppleTap,
-              icon: SvgPicture.asset(
-                IconAssets.getPath('apple'),
+        ],
+        const SizedBox(height: 16),
+        SecondaryButton(
+          height: _authButtonHeight,
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          onTap: onEmailTap,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgPicture(
+                IconAssets.loader(IconAssets.getPath('email-alt2')),
                 width: 24,
                 height: 24,
                 colorFilter: const ColorFilter.mode(
-                  AppTheme.charcoal50,
+                  _signInCoral,
                   BlendMode.srcIn,
                 ),
               ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          SecondaryButton(
-            height: _authButtonHeight,
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            onTap: onEmailTap,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SvgPicture.asset(
-                  IconAssets.getPath('email-alt2'),
-                  width: 24,
-                  height: 24,
-                  colorFilter: const ColorFilter.mode(
-                    _signInCoral,
-                    BlendMode.srcIn,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Continue with email',
-                  style: GoogleFonts.nunito(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _signInCoral,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 2,
-                  color: AppTheme.ocean100,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  'OR',
-                  style: GoogleFonts.nunito(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryOcean,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  height: 2,
-                  color: AppTheme.ocean100,
+              const SizedBox(width: 12),
+              Text(
+                'Continue with email',
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _signInCoral,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          SecondaryButton(
-            height: _authButtonHeight,
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            onTap: onGuestTap,
-            child: Text(
-              'Continue as Guest',
-              style: GoogleFonts.nunito(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: _signInCoral,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Container(height: 2, color: AppTheme.ocean100)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                'OR',
+                style: GoogleFonts.nunito(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primaryOcean,
+                ),
               ),
             ),
+            Expanded(child: Container(height: 2, color: AppTheme.ocean100)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SecondaryButton(
+          height: _authButtonHeight,
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          onTap: onGuestTap,
+          child: Text(
+            'Continue as Guest',
+            style: GoogleFonts.nunito(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _signInCoral,
+            ),
           ),
-        ],
+        ),
+      ],
     );
   }
 }
@@ -726,106 +714,106 @@ class _EmailAuthSheetContent extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-            Row(
-              children: [
-                SecondaryButton(
-                  width: 48,
-                  height: 48,
-                  padding: EdgeInsets.zero,
-                  onTap: onBack,
-                  child: SvgPicture.asset(
-                    IconAssets.getLinePath('arrow-left-alt2'),
+          Row(
+            children: [
+              SecondaryButton(
+                width: 48,
+                height: 48,
+                padding: EdgeInsets.zero,
+                onTap: onBack,
+                child: SvgPicture.asset(
+                  IconAssets.getLinePath('arrow-left-alt2'),
+                  width: 24,
+                  height: 24,
+                  colorFilter: const ColorFilter.mode(
+                    AppTheme.charcoal900,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  'Sign in with email',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.06,
+                    color: AppTheme.charcoal900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 48, height: 48),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _AuthModeSegmentedToggle(
+            isSignUp: isSignUp,
+            onChanged: onModeChanged,
+          ),
+          const SizedBox(height: 32),
+          _AuthGlassTextField(
+            controller: emailController,
+            iconName: 'email-alt2',
+            hintText: 'Email',
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email],
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your email';
+              }
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(value.trim())) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          _AuthGlassTextField(
+            controller: passwordController,
+            iconName: 'lock-locked',
+            hintText: 'Password',
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            autofillHints: isSignUp
+                ? const [AutofillHints.newPassword]
+                : const [AutofillHints.password],
+            onFieldSubmitted: (_) => onSubmit?.call(),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 32),
+          PrimaryButton(
+            width: double.infinity,
+            height: _authButtonHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            onTap: onSubmit ?? () {},
+            child: isLoading
+                ? const SizedBox(
                     width: 24,
                     height: 24,
-                    colorFilter: const ColorFilter.mode(
-                      AppTheme.charcoal900,
-                      BlendMode.srcIn,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppTheme.charcoal50,
                     ),
+                  )
+                : Text(
+                    isSignUp ? 'Create Account' : 'Sign in',
+                    style: _authButtonTextStyle(color: AppTheme.charcoal50),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Sign in with email',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.nunito(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.06,
-                      color: AppTheme.charcoal900,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 48, height: 48),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _AuthModeSegmentedToggle(
-              isSignUp: isSignUp,
-              onChanged: onModeChanged,
-            ),
-            const SizedBox(height: 32),
-            _AuthGlassTextField(
-              controller: emailController,
-              iconName: 'email-alt2',
-              hintText: 'Email',
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(
-                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                ).hasMatch(value.trim())) {
-                  return 'Please enter a valid email address';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            _AuthGlassTextField(
-              controller: passwordController,
-              iconName: 'lock-locked',
-              hintText: 'Password',
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              autofillHints: isSignUp
-                  ? const [AutofillHints.newPassword]
-                  : const [AutofillHints.password],
-              onFieldSubmitted: (_) => onSubmit?.call(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-            PrimaryButton(
-              width: double.infinity,
-              height: _authButtonHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              onTap: onSubmit ?? () {},
-              child: isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: AppTheme.charcoal50,
-                      ),
-                    )
-                  : Text(
-                      isSignUp ? 'Create Account' : 'Sign in',
-                      style: _authButtonTextStyle(color: AppTheme.charcoal50),
-                    ),
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -857,10 +845,8 @@ class _AuthModeSegmentedToggle extends StatelessWidget {
               padding: const EdgeInsets.all(4),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final segmentWidth =
-                      (constraints.maxWidth - _segmentGap) / 2;
-                  final pillLeft =
-                      isSignUp ? segmentWidth + _segmentGap : 0.0;
+                  final segmentWidth = (constraints.maxWidth - _segmentGap) / 2;
+                  final pillLeft = isSignUp ? segmentWidth + _segmentGap : 0.0;
 
                   return Stack(
                     fit: StackFit.expand,
@@ -940,9 +926,7 @@ class _AuthModeToggleTrack extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.charcoal50.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(200),
-        boxShadow: const [
-          BoxShadow(color: Color(0x0A000000), blurRadius: 2),
-        ],
+        boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 2)],
       ),
     );
 
@@ -1057,14 +1041,11 @@ class _AuthGlassTextField extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            IconAssets.getPath(iconName),
+          SvgPicture(
+            IconAssets.loader(IconAssets.getPath(iconName)),
             width: 24,
             height: 24,
-            colorFilter: const ColorFilter.mode(
-              _signInCoral,
-              BlendMode.srcIn,
-            ),
+            colorFilter: const ColorFilter.mode(_signInCoral, BlendMode.srcIn),
           ),
           const SizedBox(width: 8),
           Expanded(

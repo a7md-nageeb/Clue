@@ -69,10 +69,12 @@ class AuthService {
   }
 
   /// Google Sign-In flow.
-  /// macOS uses browser OAuth (avoids native keychain/provisioning requirements).
+  /// Desktop (macOS/Windows/Linux) uses browser OAuth via loopback redirect.
   /// iOS/Android use native Google Sign-In + Supabase ID token exchange.
   Future<AuthResponse> signInWithGoogle() async {
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux) {
       return _signInWithGoogleBrowser();
     }
 

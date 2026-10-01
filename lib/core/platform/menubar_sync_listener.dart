@@ -48,8 +48,9 @@ class _MenuBarSyncListenerState extends ConsumerState<MenuBarSyncListener> {
   void _scheduleSync(List<Item> items) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 100), () {
-      final menuBarItems =
-          items.where((item) => item.showInMenuBar).toList(growable: false);
+      final menuBarItems = items
+          .where((item) => item.showInMenuBar)
+          .toList(growable: false);
       MenuBarService.updateItems(menuBarItems);
     });
   }

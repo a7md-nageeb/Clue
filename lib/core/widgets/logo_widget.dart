@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../constants/icon_assets.dart';
 
 class ForgottenThingsLogo extends StatelessWidget {
   final double size;
@@ -18,8 +19,8 @@ class ForgottenThingsLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (assetPath.endsWith('.svg')) {
-      return SvgPicture.asset(
-        assetPath,
+      return SvgPicture(
+        IconAssets.loader(assetPath),
         width: width ?? (height == null ? size : null),
         height: height ?? size,
         fit: BoxFit.contain,

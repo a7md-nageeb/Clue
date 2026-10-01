@@ -38,10 +38,11 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 }
 
 // Notifier provider for Biometrics settings
-final biometricsEnabledProvider =
-    NotifierProvider<BiometricsNotifier, bool>(() {
-      return BiometricsNotifier();
-    });
+final biometricsEnabledProvider = NotifierProvider<BiometricsNotifier, bool>(
+  () {
+    return BiometricsNotifier();
+  },
+);
 
 class BiometricsNotifier extends Notifier<bool> {
   final LocalAuthentication _auth = LocalAuthentication();
@@ -108,12 +109,11 @@ class BiometricsNotifier extends Notifier<bool> {
   }
 }
 
-
-
-final startAtStartupProvider =
-    NotifierProvider<StartAtStartupNotifier, bool>(() {
-      return StartAtStartupNotifier();
-    });
+final startAtStartupProvider = NotifierProvider<StartAtStartupNotifier, bool>(
+  () {
+    return StartAtStartupNotifier();
+  },
+);
 
 class StartAtStartupNotifier extends Notifier<bool> {
   static const _key = 'startAtStartupPrefsKey';
@@ -126,12 +126,13 @@ class StartAtStartupNotifier extends Notifier<bool> {
   bool build() {
     final prefs = ref.watch(sharedPreferencesProvider);
     final cachedValue = prefs.getBool(_key) ?? false;
-    
+
     // Defer the async native fetch to not block build
     Future.microtask(() async {
       if (!isSupported) return;
       try {
-        final nativeValue = await _channel.invokeMethod<bool>('getStartAtStartup') ?? false;
+        final nativeValue =
+            await _channel.invokeMethod<bool>('getStartAtStartup') ?? false;
         if (nativeValue != state) {
           state = nativeValue;
           final p = ref.read(sharedPreferencesProvider);
@@ -141,7 +142,7 @@ class StartAtStartupNotifier extends Notifier<bool> {
         debugPrint('Failed to get start at startup: $e');
       }
     });
-    
+
     return cachedValue;
   }
 
@@ -153,7 +154,9 @@ class StartAtStartupNotifier extends Notifier<bool> {
 
     bool success = false;
     try {
-      success = await _channel.invokeMethod<bool>('setStartAtStartup', enabled) ?? false;
+      success =
+          await _channel.invokeMethod<bool>('setStartAtStartup', enabled) ??
+          false;
     } catch (e) {
       debugPrint('Failed to set start at startup: $e');
     }
@@ -164,6 +167,104 @@ class StartAtStartupNotifier extends Notifier<bool> {
     }
 
     return success;
+  }
+}
+
+final toastUnblurEnabledProvider = NotifierProvider<ToastUnblurNotifier, bool>(
+  ToastUnblurNotifier.new,
+);
+
+class ToastUnblurNotifier extends Notifier<bool> {
+  static const _key = 'toast_unblur_enabled';
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? true;
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_key, enabled);
+  }
+}
+
+final toastFromBottomProvider = NotifierProvider<ToastFromBottomNotifier, bool>(
+  ToastFromBottomNotifier.new,
+);
+
+class ToastFromBottomNotifier extends Notifier<bool> {
+  static const _key = 'toast_from_bottom';
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? true;
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_key, enabled);
+  }
+}
+
+final toastSubtleMotionProvider =
+    NotifierProvider<ToastSubtleMotionNotifier, bool>(
+      ToastSubtleMotionNotifier.new,
+    );
+
+class ToastSubtleMotionNotifier extends Notifier<bool> {
+  static const _key = 'toast_subtle_motion';
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? true;
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_key, enabled);
+  }
+}
+
+class NoteTextSizes {
+  static const sizes = [14.0, 16.0, 18.0, 20.0, 22.0];
+  static const defaultIndex = 2;
+  static const stepPx = 2.0;
+  static const lineHeightRatio = 26 / 18;
+  static const letterSpacing = -0.25;
+
+  static double sizeFor(int index) => sizes[index.clamp(0, sizes.length - 1)];
+
+  static double scaledFrom(double base, int index) =>
+      base + (index.clamp(0, sizes.length - 1) - defaultIndex) * stepPx;
+}
+
+final noteTextSizeIndexProvider =
+    NotifierProvider<NoteTextSizeIndexNotifier, int>(
+      NoteTextSizeIndexNotifier.new,
+    );
+
+class NoteTextSizeIndexNotifier extends Notifier<int> {
+  static const _key = 'note_text_size_index';
+
+  @override
+  int build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final stored = prefs.getInt(_key) ?? NoteTextSizes.defaultIndex;
+    return stored.clamp(0, NoteTextSizes.sizes.length - 1);
+  }
+
+  Future<void> setIndex(int index) async {
+    final next = index.clamp(0, NoteTextSizes.sizes.length - 1);
+    if (next == state) return;
+    state = next;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setInt(_key, next);
   }
 }
 

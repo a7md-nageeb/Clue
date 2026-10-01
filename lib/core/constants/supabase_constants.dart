@@ -20,6 +20,5 @@ class SupabaseConstants {
 
   /// Loopback redirect for macOS browser OAuth (add to Supabase Auth redirect URLs).
   static const int oauthCallbackPort = 46489;
-  static const String oauthRedirectUrl =
-      'http://127.0.0.1:46489/auth/callback';
+  static const String oauthRedirectUrl = 'http://127.0.0.1:46489/auth/callback';
 }

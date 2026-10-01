@@ -40,113 +40,116 @@ Future<void> showItemMoreMenu({
 }) {
   onMenuOpened?.call();
 
-  return Navigator.of(context).push(
-    PageRouteBuilder<void>(
-      opaque: false,
-      fullscreenDialog: true,
-      barrierDismissible: true,
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, _, __) {
-        final screenWidth = MediaQuery.sizeOf(context).width;
-        const menuWidth = 224.0;
+  return Navigator.of(context)
+      .push(
+        PageRouteBuilder<void>(
+          opaque: false,
+          fullscreenDialog: true,
+          barrierDismissible: true,
+          barrierColor: Colors.transparent,
+          pageBuilder: (context, _, __) {
+            final screenWidth = MediaQuery.sizeOf(context).width;
+            const menuWidth = 224.0;
 
-        final top = placement == ItemMoreMenuPlacement.belowTopRight
-            ? globalAnchor.dy + 52
-            : globalAnchor.dy + 8;
+            final top = placement == ItemMoreMenuPlacement.belowTopRight
+                ? globalAnchor.dy + 52
+                : globalAnchor.dy + 8;
 
-        Widget menu = Material(
-          color: Colors.transparent,
-          child: Container(
-            width: menuWidth,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 4,
-                  spreadRadius: 2,
-                  offset: Offset(0, 4),
+            Widget menu = Material(
+              color: Colors.transparent,
+              child: Container(
+                width: menuWidth,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 4,
+                      spreadRadius: 2,
+                      offset: Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 2,
+                      spreadRadius: 1,
+                      offset: Offset.zero,
+                    ),
+                  ],
                 ),
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 2,
-                  spreadRadius: 1,
-                  offset: Offset.zero,
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.charcoal50.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0xF5FFFFFF),
-                        blurRadius: 2,
-                        offset: Offset(-1, -1),
-                        blurStyle: BlurStyle.inner,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.charcoal50.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xF5FFFFFF),
+                            blurRadius: 2,
+                            offset: Offset(-1, -1),
+                            blurStyle: BlurStyle.inner,
+                          ),
+                          BoxShadow(
+                            color: Color(0xF5FFFFFF),
+                            blurRadius: 2,
+                            offset: Offset(1, 1),
+                            blurStyle: BlurStyle.inner,
+                          ),
+                          BoxShadow(
+                            color: Color(0xBFFFFFFF),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                            blurStyle: BlurStyle.inner,
+                          ),
+                        ],
                       ),
-                      BoxShadow(
-                        color: Color(0xF5FFFFFF),
-                        blurRadius: 2,
-                        offset: Offset(1, 1),
-                        blurStyle: BlurStyle.inner,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: _buildMenuItems(
+                          context: context,
+                          ref: ref,
+                          item: item,
+                          titleOverride: titleOverride,
+                          contentOverride: contentOverride,
+                          onDeleted: onDeleted,
+                          onPinnedChanged: onPinnedChanged,
+                          onMenuBarVisibilityChanged:
+                              onMenuBarVisibilityChanged,
+                        ),
                       ),
-                      BoxShadow(
-                        color: Color(0xBFFFFFFF),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                        blurStyle: BlurStyle.inner,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _buildMenuItems(
-                      context: context,
-                      ref: ref,
-                      item: item,
-                      titleOverride: titleOverride,
-                      contentOverride: contentOverride,
-                      onDeleted: onDeleted,
-                      onPinnedChanged: onPinnedChanged,
-                      onMenuBarVisibilityChanged: onMenuBarVisibilityChanged,
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-        );
+            );
 
-        if (placement == ItemMoreMenuPlacement.belowTopRight) {
-          menu = Positioned(top: top, right: 20, child: menu);
-        } else {
-          final left = (globalAnchor.dx - menuWidth / 2).clamp(
-            16.0,
-            screenWidth - menuWidth - 16,
-          );
-          menu = Positioned(top: top, left: left, child: menu);
-        }
+            if (placement == ItemMoreMenuPlacement.belowTopRight) {
+              menu = Positioned(top: top, right: 20, child: menu);
+            } else {
+              final left = (globalAnchor.dx - menuWidth / 2).clamp(
+                16.0,
+                screenWidth - menuWidth - 16,
+              );
+              menu = Positioned(top: top, left: left, child: menu);
+            }
 
-        return Stack(
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              behavior: HitTestBehavior.opaque,
-              child: Container(color: Colors.transparent),
-            ),
-            menu,
-          ],
-        );
-      },
-    ),
-  ).whenComplete(onMenuClosed ?? () {});
+            return Stack(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(color: Colors.transparent),
+                ),
+                menu,
+              ],
+            );
+          },
+        ),
+      )
+      .whenComplete(onMenuClosed ?? () {});
 }
 
 List<Widget> _buildMenuItems({
@@ -319,8 +322,8 @@ class _ItemMoreMenuItem extends StatelessWidget {
           ),
           child: Row(
             children: [
-              SvgPicture.asset(
-                iconPath,
+              SvgPicture(
+                IconAssets.loader(iconPath),
                 width: 20,
                 height: 20,
                 colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
